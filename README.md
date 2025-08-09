@@ -40,7 +40,9 @@ Base URL: `https://www.cse.lk/api/`
 | chartData                         | Chart data for stocks                           | POST        |
 | allSectors                        | Data for all sectors                            | POST        |
 
+
 ---
+visit <a href='https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation/blob/main/api_endpoint_urls.txt'>this link</a> to view all complete endpoint urls.
 
 ## Usage Example 💻
 
