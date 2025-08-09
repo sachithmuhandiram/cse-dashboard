@@ -1,4 +1,4 @@
-````markdown
+
 # Colombo Stock Exchange (CSE) API 📈🏢
 
 > **Unofficial API usage guide & Python example 🐍**  
@@ -15,58 +15,49 @@ This repository documents some of the known API endpoints, example responses, an
 
 ## API Endpoints 🔗
 
-| Endpoint URL                                 | Description                                     | HTTP Method |
-|----------------------------------------------|------------------------------------------------|-------------|
-| `https://www.cse.lk/api/companyInfoSummery` | Detailed info of a single stock/security by symbol | POST     |
-| `https://www.cse.lk/api/tradeSummary`       | Summary of trades for all securities               | POST     |
+Base URL: `https://www.cse.lk/api/`
+
+| Endpoint                                | Description                                 | HTTP Method |
+|---------------------------------------|---------------------------------------------|-------------|
+| companyInfoSummery                    | Detailed info of a single stock/security by symbol | POST        |
+| tradeSummary                         | Summary of trades for all securities         | POST        |
+| todaySharePrice                     | Today's share price data                      | POST        |
+| topGainers                         | List of top gaining stocks                    | POST        |
+| topLooses                          | List of top losing stocks                     | POST        |
+| mostActiveTrades                   | Most active trades by volume                  | POST        |
+| getNewListingsRelatedNoticesAnnouncements | New listings and related announcements    | POST        |
+| getBuyInBoardAnnouncements          | Buy-in board announcements                    | POST        |
+| approvedAnnouncement                | Approved announcements                         | POST        |
+| getCOVIDAnnouncements               | COVID-related announcements                   | POST        |
+| getFinancialAnnouncement            | Financial announcements                        | POST        |
+| circularAnnouncement                | Circular announcements                         | POST        |
+| directiveAnnouncement               | Directive announcements                        | POST        |
+| getNonComplianceAnnouncements       | Non-compliance announcements                   | POST        |
+| marketStatus                       | Market open/close status                       | POST        |
+| marketSummery                      | Market summary data                            | POST        |
+| aspiData                          | All Share Price Index data                     | POST        |
+| snpData                           | S&P Sri Lanka 20 Index data                    | POST        |
+| chartData                         | Chart data for stocks                           | POST        |
+| allSectors                        | Data for all sectors                            | POST        |
 
 ---
 
-## Usage Examples 💻
+## Usage Example 💻
 
 ### Get detailed stock info by symbol 🔍
 
 ```python
 import requests
-from pprint import pprint
 
-API_URL = "https://www.cse.lk/api/companyInfoSummery"
-HEADERS = {
-    # Include required headers here
-}
-COOKIES = {
-    # Include required cookies here
-}
+base_url = "https://www.cse.lk/api/"
+endpoint = "companyInfoSummery"
 
-def get_stock_details(symbol):
-    data = {"symbol": symbol}
-    response = requests.post(API_URL, headers=HEADERS, cookies=COOKIES, data=data)
-    response.raise_for_status()
-    return response.json()
+data = {"symbol": "LOLC.N0000"}
 
-if __name__ == "__main__":
-    symbol = "LOLC.N0000"
-    details = get_stock_details(symbol)
-    pprint(details)
-````
+response = requests.post(base_url + endpoint, data=data)
 
----
-
-### Get summary of all recent trades 📊
-
-```python
-import requests
-
-TRADE_SUMMARY_URL = "https://www.cse.lk/api/tradeSummary"
-
-def get_trade_summary():
-    response = requests.post(TRADE_SUMMARY_URL)
-    response.raise_for_status()
-    return response.json()
-
-if __name__ == "__main__":
-    trades = get_trade_summary()
-    print(trades)
+print(f"Status code: {response.status_code}")
+print(response.json())  # Prints the response as a Python dictionary
 ```
 
 ---
@@ -81,46 +72,15 @@ if __name__ == "__main__":
     "lastTradedPrice": 546.5,
     "change": -2.5,
     "changePercentage": -0.455,
-    "marketCap": 259696800000,
-    ...
+    "marketCap": 259696800000
   },
   "reqLogo": {
     "id": 2168,
     "path": "upload_logo/378_1601611239.jpeg"
   },
   "reqSymbolBetaInfo": {
-    "betaValueSPSL": 1.0227,
-    ...
+    "betaValueSPSL": 1.0227
   }
-}
-```
-
----
-
-## Sample Response: `tradeSummary` 📈
-
-```json
-{
-  "reqTradeSummery": [
-    {
-      "id": 204,
-      "symbol": "ABAN.N0000",
-      "name": "ABANS ELECTRICALS PLC",
-      "price": 579.75,
-      "change": 23.75,
-      "percentageChange": 4.27,
-      "sharevolume": 8290,
-      "turnover": 4800716.75,
-      ...
-    },
-    {
-      "id": 1845,
-      "symbol": "AFSL.N0000",
-      "name": "ABANS FINANCE PLC",
-      "price": 72.5,
-      ...
-    }
-  ]
 }
 ```
 
@@ -128,23 +88,16 @@ if __name__ == "__main__":
 
 ## Contribution 🤝
 
-This is an **unofficial** reverse-engineered API.
-If you discover more endpoints or useful parameters, please submit a **Pull Request**!
+This is an **unofficial** reverse-engineered API.  
+If you discover more endpoints or useful parameters, please submit a **Pull Request**!  
 Help expand the community knowledge about the Colombo Stock Exchange API. 🚀
 
 ---
 
 ## Disclaimer ⚠️
 
-* Use responsibly and verify data accuracy with official CSE sources.
-* API endpoints and formats may change without notice.
+* Use responsibly and verify data accuracy with official CSE sources.  
+* API endpoints and formats may change without notice.  
 * This repository is for educational purposes only.
 
-```
-
 ---
-
-
-
-If you want, I can save this as a `.md` file and share a download link for you to directly upload to GitHub. Would you like that?
-```
