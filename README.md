@@ -15,10 +15,10 @@ This repository documents some of the known API endpoints, example responses, an
 
 ## API Endpoints 🔗
 
-| Endpoint URL                                | Description                                     | HTTP Method | Notes                                        |
-|---------------------------------------------|------------------------------------------------|-------------|----------------------------------------------|
-| `https://www.cse.lk/api/companyInfoSummery` | Detailed info of a single stock/security by symbol | POST        | Requires `symbol` in form data                |
-| `https://www.cse.lk/api/tradeSummary`         | Summary of trades for all securities            | POST        | Returns an array of recent trading data       |
+| Endpoint URL                                 | Description                                     | HTTP Method |
+|----------------------------------------------|------------------------------------------------|-------------|
+| `https://www.cse.lk/api/companyInfoSummery` | Detailed info of a single stock/security by symbol | POST        |
+| `https://www.cse.lk/api/tradeSummary`        | Summary of trades for all securities            | POST        |
 
 ---
 
@@ -142,4 +142,9 @@ Help expand the community knowledge about the Colombo Stock Exchange API. 🚀
 
 ```
 
+---
+
+
+
+If you want, I can save this as a `.md` file and share a download link for you to directly upload to GitHub. Would you like that?
 ```
