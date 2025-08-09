@@ -17,8 +17,8 @@ This repository documents some of the known API endpoints, example responses, an
 
 | Endpoint URL                                 | Description                                     | HTTP Method |
 |----------------------------------------------|------------------------------------------------|-------------|
-| `https://www.cse.lk/api/companyInfoSummery` | Detailed info of a single stock/security by symbol | POST        |
-| `https://www.cse.lk/api/tradeSummary`        | Summary of trades for all securities            | POST        |
+| `https://www.cse.lk/api/companyInfoSummery` | Detailed info of a single stock/security by symbol | POST     |
+| `https://www.cse.lk/api/tradeSummary`       | Summary of trades for all securities               | POST     |
 
 ---
 
