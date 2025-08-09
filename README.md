@@ -3,7 +3,7 @@
 
 > **Unofficial API usage guide & Python example 🐍**  
 > Explore stock market data from the Colombo Stock Exchange (CSE) via their public API endpoints — reverse-engineered since no official documentation exists. 🔍
-
+Visite <a href='https://gh0sth4cker.github.io/Colombo-Stock-Exchange-CSE-API-Documentation/'>this link</a> to see web view
 ---
 
 ## Overview 📋
