@@ -1,5 +1,3 @@
-Sure! Here's your README with some tasteful emojis added to make it more engaging and friendly:
-
 ````markdown
 # Colombo Stock Exchange (CSE) API 📈🏢
 
@@ -144,5 +142,4 @@ Help expand the community knowledge about the Colombo Stock Exchange API. 🚀
 
 ```
 
-Would you like me to prepare this as a `.md` file you can directly add to your repo?
 ```
