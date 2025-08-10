@@ -1,10 +1,10 @@
-
 # Colombo Stock Exchange (CSE) API 📈🏢
 
 > **Unofficial API usage guide & Python example 🐍**  
 > Explore stock market data from the Colombo Stock Exchange (CSE) via their public API endpoints — reverse-engineered since no official documentation exists. 🔍
 
 ---
+
 <b>Visit <a href='https://gh0sth4cker.github.io/Colombo-Stock-Exchange-CSE-API-Documentation/'>this link</a> to see web view<b>
 
 ## Overview 📋
@@ -18,31 +18,33 @@ This repository documents some of the known API endpoints, example responses, an
 
 Base URL: `https://www.cse.lk/api/`
 
-| Endpoint                                | Description                                 | HTTP Method |
-|---------------------------------------|---------------------------------------------|-------------|
-| companyInfoSummery                    | Detailed info of a single stock/security by symbol | POST        |
-| tradeSummary                         | Summary of trades for all securities         | POST        |
-| todaySharePrice                     | Today's share price data                      | POST        |
-| topGainers                         | List of top gaining stocks                    | POST        |
-| topLooses                          | List of top losing stocks                     | POST        |
-| mostActiveTrades                   | Most active trades by volume                  | POST        |
-| getNewListingsRelatedNoticesAnnouncements | New listings and related announcements    | POST        |
-| getBuyInBoardAnnouncements          | Buy-in board announcements                    | POST        |
-| approvedAnnouncement                | Approved announcements                         | POST        |
-| getCOVIDAnnouncements               | COVID-related announcements                   | POST        |
-| getFinancialAnnouncement            | Financial announcements                        | POST        |
-| circularAnnouncement                | Circular announcements                         | POST        |
-| directiveAnnouncement               | Directive announcements                        | POST        |
-| getNonComplianceAnnouncements       | Non-compliance announcements                   | POST        |
-| marketStatus                       | Market open/close status                       | POST        |
-| marketSummery                      | Market summary data                            | POST        |
-| aspiData                          | All Share Price Index data                     | POST        |
-| snpData                           | S&P Sri Lanka 20 Index data                    | POST        |
-| chartData                         | Chart data for stocks                           | POST        |
-| allSectors                        | Data for all sectors                            | POST        |
-
+| Endpoint                                  | Description                                        | HTTP Method |
+| ----------------------------------------- | -------------------------------------------------- | ----------- |
+| companyInfoSummery                        | Detailed info of a single stock/security by symbol | POST        |
+| tradeSummary                              | Summary of trades for all securities               | POST        |
+| todaySharePrice                           | Today's share price data                           | POST        |
+| topGainers                                | List of top gaining stocks                         | POST        |
+| topLooses                                 | List of top losing stocks                          | POST        |
+| mostActiveTrades                          | Most active trades by volume                       | POST        |
+| getNewListingsRelatedNoticesAnnouncements | New listings and related announcements             | POST        |
+| getBuyInBoardAnnouncements                | Buy-in board announcements                         | POST        |
+| approvedAnnouncement                      | Approved announcements                             | POST        |
+| getCOVIDAnnouncements                     | COVID-related announcements                        | POST        |
+| getFinancialAnnouncement                  | Financial announcements                            | POST        |
+| circularAnnouncement                      | Circular announcements                             | POST        |
+| directiveAnnouncement                     | Directive announcements                            | POST        |
+| getNonComplianceAnnouncements             | Non-compliance announcements                       | POST        |
+| marketStatus                              | Market open/close status                           | POST        |
+| marketSummery                             | Market summary data                                | POST        |
+| aspiData                                  | All Share Price Index data                         | POST        |
+| snpData                                   | S&P Sri Lanka 20 Index data                        | POST        |
+| chartData                                 | Chart data for stocks                              | POST        |
+| allSectors                                | Data for all sectors                               | POST        |
+| detailedTrades                            | Detailed Trades                                    | POST        |
+| dailyMarketSummery                        | Daily Market Summary                               | POST        |
 
 ---
+
 visit <a href='https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation/blob/main/api_endpoint_urls.txt'>this link</a> to view all complete endpoint urls.
 
 ## Usage Example 💻
@@ -99,8 +101,8 @@ Help expand the community knowledge about the Colombo Stock Exchange API. 🚀
 
 ## Disclaimer ⚠️
 
-* Use responsibly and verify data accuracy with official CSE sources.  
-* API endpoints and formats may change without notice.  
-* This repository is for educational purposes only.
+- Use responsibly and verify data accuracy with official CSE sources.
+- API endpoints and formats may change without notice.
+- This repository is for educational purposes only.
 
 ---

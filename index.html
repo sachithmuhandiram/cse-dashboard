@@ -75,6 +75,69 @@
     <details class="endpoint"><summary>chartData</summary><div class="endpoint-content"><p>Requires <code>symbol</code> but may return HTTP 400 for some values.</p></div></details>
 
     <details class="endpoint"><summary>allSectors</summary><div class="endpoint-content"><pre>[{"symbol": "EGY", "indexName": "S&P/CSE Energy Industry Group Index", ...}]</pre></div></details>
+
+    <details class="endpoint"><summary>Detailed Trades</summary><div class="endpoint-content"><p><strong>URL:</strong> <code>https://www.cse.lk/api/detailedTrades</code></p><p><strong>Parameters:</strong> <code>symbol</code> (string, not required)</p><p><strong>Example Response:</strong></p><pre>
+    {
+      "reqDetailTrades": [
+          {
+              "id": 204,
+              "securityId": null,
+              "name": "ABANS ELECTRICALS PLC",
+              "symbol": "ABAN.N0000",
+              "price": 585.0,
+              "qty": 562,
+              "trades": 7,
+              "change": 29.0,
+              "changePercentage": 5.215827338129497
+          },
+        ]
+      }</details>
+
+    <details class="endpoint"><summary>Daily Market Summary</summary><div class="endpoint-content"><p><strong>URL:</strong> <code>https://www.cse.lk/api/dailyMarketSummery</code></p><p><strong>Parameters:</strong> None</p><p><strong>Example Response:</strong></p><pre>
+    [
+      [
+        {
+            "id": 22240,
+            "tradeDate": 1754505000000,
+            "marketTurnover": 3.26376192E9,
+            "marketTrades": 30274.0,
+            "marketDomestic": 30003.0,
+            "marketForeign": 271.0,
+            "equityTurnover": 3.26376192E9,
+            "equityDomesticPurchase": 3.15549645E9,
+            "equityDomesticSales": 3.18251674E9,
+            "equityForeignPurchase": 1.08265512E8,
+            "equityForeignSales": 8.1245208E7,
+            "volumeOfTurnOverNumber": 1.15084304E8,
+            "volumeOfTurnoverDomestic": 1.13407144E8,
+            "volumeOfTurnoverForeign": 1677157,
+            "tradesNo": 30274,
+            "tradesNoDomestic": 30003,
+            "tradesNoForeign": 271,
+            "listedCompanyNumber": 286,
+            "tradeCompanyNumber": 264,
+            "marketCap": 6.940225783432E12,
+            "cdsHoldingsTotal": 1.76301605E11,
+            "cdsHoldingsDomestic": 1.45956422E11,
+            "cdsHoldingsForeign": 3.03451935E10,
+            "cdsMarketValueTotal": 5.5536905E12,
+            "cdsMarketValueDomestic": 4.5569682E12,
+            "cdsMarketValueForeign": 9.9672234E11,
+            "corporateDebtValue": 0.0,
+            "governmentDebtValue": 0.0,
+            "triasi": 29913.8,
+            "spt": 11861.33,
+            "asi": 19826.57,
+            "mpi": null,
+            "spp": 5825.39,
+            "trimpi": null,
+            "per": 9.2,
+            "pbv": 1.3,
+            "dy": 2.5
+        }
+      ],
+    ]
+    </details>
   </section>
 </body>
 </html>
