@@ -18,3 +18,5 @@ https://www.cse.lk/api/aspiData									                    All Share Price Inde
 https://www.cse.lk/api/snpData									                    S&P Sri Lanka 20 Index data	
 https://www.cse.lk/api/chartData									                  Chart data for stocks	
 https://www.cse.lk/api/allSectors								                    All sector data	
+https://www.cse.lk/api/detailedTrades                                   Detailed Trades
+https://www.cse.lk/api/dailyMarketSummery                               Daily Market Summary
