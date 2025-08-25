@@ -47,7 +47,7 @@ Base URL: `https://www.cse.lk/api/`
 
 visit <a href='https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation/blob/main/api_endpoint_urls.txt'>this link</a> to view all complete endpoint urls.
 
-## Usage Example 💻
+## Usage Example 💻python
 
 ### Get detailed stock info by symbol 🔍
 
