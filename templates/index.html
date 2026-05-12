@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Market Overview — CSE Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">Market Overview</h4>
+    <small class="text-muted">{{ stocks | length }} stocks &mdash; click a row to explore</small>
+  </div>
+</div>
+
+<!-- Stock table -->
+<div class="card mb-4">
+  <div class="card-header">
+    <span class="label">Stocks</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Company</th>
+          <th class="text-end">Close (LKR)</th>
+          <th class="text-end">Change</th>
+          <th class="text-end">Chg %</th>
+          <th class="text-end">High</th>
+          <th class="text-end">Low</th>
+          <th class="text-end">Volume</th>
+          <th class="text-end">Turnover</th>
+          <th class="text-end">Trades</th>
+          <th class="text-end">Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in stocks %}
+        {% set up = s.change is not none and s.change >= 0 %}
+        {% set dn = s.change is not none and s.change < 0 %}
+        <tr style="cursor:pointer" onclick="location.href='/stock/{{ s.symbol }}'">
+          <td>
+            <a href="/stock/{{ s.symbol }}" class="fw-semibold" onclick="event.stopPropagation()">
+              {{ s.symbol }}
+            </a>
+          </td>
+          <td class="text-muted">{{ s.name }}</td>
+          <td class="text-end fw-semibold">
+            {% if s.close_price %}{{ "%.2f" | format(s.close_price) }}{% else %}—{% endif %}
+          </td>
+          <td class="text-end">
+            {% if s.change is not none %}
+              <span class="{{ 'chg-up' if up else 'chg-down' }}">
+                {{ "%+.2f" | format(s.change) }}
+              </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-end">
+            {% if s.change_pct is not none %}
+              <span class="{{ 'pct-up' if up else 'pct-down' }}">
+                {{ "%+.2f%%" | format(s.change_pct) }}
+              </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-end text-muted">{{ "%.2f" | format(s.high_price) if s.high_price else "—" }}</td>
+          <td class="text-end text-muted">{{ "%.2f" | format(s.low_price)  if s.low_price  else "—" }}</td>
+          <td class="text-end text-muted">{{ s.volume | num }}</td>
+          <td class="text-end text-muted">{{ s.turnover | lkr }}</td>
+          <td class="text-end text-muted">{{ s.trades | num }}</td>
+          <td class="text-end text-muted small">{{ s.trade_date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Events -->
+{% if events %}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="label">Trigger Events</span>
+    <span class="text-muted small">{{ events | length }} recent</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Symbol</th>
+          <th>Company</th>
+          <th>Event</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr>
+          <td class="text-muted small">{{ e.date }}</td>
+          <td><a href="/stock/{{ e.symbol }}">{{ e.symbol }}</a></td>
+          <td class="text-muted">{{ e.name }}</td>
+          <td>
+            {% if e.kind == "volume" %}
+              <span class="ev-volume"><i class="bi bi-bar-chart-fill me-1"></i>{{ e.title }}</span>
+            {% elif e.kind == "price_up" %}
+              <span class="ev-up"><i class="bi bi-arrow-up-right me-1"></i>{{ e.title }}</span>
+            {% elif e.kind == "price_down" %}
+              <span class="ev-down"><i class="bi bi-arrow-down-right me-1"></i>{{ e.title }}</span>
+            {% else %}
+              {{ e.title }}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

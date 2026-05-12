@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}{{ stock.symbol }} — CSE Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb + header -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+    <li class="breadcrumb-item active">{{ stock.symbol }}</li>
+  </ol>
+</nav>
+
+<div class="mb-4">
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <h3 class="mb-0 fw-bold">{{ stock.name }}</h3>
+    <span class="text-muted">{{ stock.symbol }}</span>
+  </div>
+
+  {% if latest %}
+  <div class="d-flex align-items-baseline gap-3 mt-2 flex-wrap">
+    <span class="fw-bold" style="font-size:2rem">
+      LKR {{ "%.2f" | format(latest.close_price) if latest.close_price else "—" }}
+    </span>
+    {% if change is not none %}
+    {% set up = change >= 0 %}
+    <span class="{{ 'chg-up' if up else 'chg-down' }}" style="font-size:1.1rem">
+      <i class="bi {{ 'bi-arrow-up-right' if up else 'bi-arrow-down-right' }}"></i>
+      {{ "%+.2f" | format(change) }}
+      <span class="{{ 'pct-up' if up else 'pct-down' }} ms-1">{{ "%+.2f%%" | format(change_pct) }}</span>
+    </span>
+    {% endif %}
+    <span class="text-muted small">as of {{ latest.date }}</span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Stats row -->
+{% if latest %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-md-2">
+    <div class="stat-box">
+      <div class="label">Volume</div>
+      <div class="value">{{ latest.volume | num }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <div class="stat-box">
+      <div class="label">Trades</div>
+      <div class="value">{{ latest.trades | num }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <div class="stat-box">
+      <div class="label">Turnover</div>
+      <div class="value">{{ latest.turnover | lkr }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <div class="stat-box">
+      <div class="label">Day High</div>
+      <div class="value chg-up">{{ "%.2f" | format(latest.high_price) if latest.high_price else "—" }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <div class="stat-box">
+      <div class="label">Day Low</div>
+      <div class="value chg-down">{{ "%.2f" | format(latest.low_price) if latest.low_price else "—" }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <div class="stat-box">
+      <div class="label">Exchange</div>
+      <div class="value">{{ stock.exchange }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Price chart -->
+<div class="card mb-4">
+  <div class="card-header">
+    <span class="label">Close Price History (LKR)</span>
+  </div>
+  <div class="card-body" style="padding:1.2rem">
+    <canvas id="priceChart" style="max-height:280px"></canvas>
+  </div>
+</div>
+
+<!-- Volume chart -->
+<div class="card mb-4">
+  <div class="card-header">
+    <span class="label">Daily Volume</span>
+  </div>
+  <div class="card-body" style="padding:1.2rem">
+    <canvas id="volChart" style="max-height:180px"></canvas>
+  </div>
+</div>
+
+<!-- Events -->
+{% if events %}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="label">Events</span>
+    <span class="text-muted small">{{ events | length }} total</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr><th>Date</th><th>Event</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr>
+          <td class="text-muted small">{{ e.date }}</td>
+          <td>
+            {% if e.kind == "volume" %}
+              <span class="ev-volume"><i class="bi bi-bar-chart-fill me-1"></i>{{ e.title }}</span>
+            {% elif e.kind == "price_up" %}
+              <span class="ev-up"><i class="bi bi-arrow-up-right me-1"></i>{{ e.title }}</span>
+            {% elif e.kind == "price_down" %}
+              <span class="ev-down"><i class="bi bi-arrow-down-right me-1"></i>{{ e.title }}</span>
+            {% else %}
+              {{ e.title }}
+            {% endif %}
+          </td>
+          <td class="text-muted">{{ e.description or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="text-muted small">No events triggered for this stock in the loaded period.</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const history = {{ history_json | safe }};
+const labels   = history.map(r => r.date);
+const closes   = history.map(r => r.close_price);
+const volumes  = history.map(r => r.volume);
+
+const grid  = "rgba(48,54,61,0.8)";
+const ticks = "#8b949e";
+const tip   = { backgroundColor:"#1c2128", borderColor:"#30363d", borderWidth:1, titleColor:"#e6edf3", bodyColor:"#8b949e" };
+
+/* determine line colour from first→last */
+const lineColor = closes.at(-1) >= closes[0] ? "#3fb950" : "#f85149";
+const fillColor = closes.at(-1) >= closes[0] ? "rgba(63,185,80,0.08)" : "rgba(248,81,73,0.08)";
+
+/* price chart */
+new Chart(document.getElementById("priceChart"), {
+  type: "line",
+  data: {
+    labels,
+    datasets: [{
+      label: "Close (LKR)",
+      data: closes,
+      borderColor: lineColor,
+      backgroundColor: fillColor,
+      borderWidth: 2,
+      pointRadius: 3,
+      pointBackgroundColor: lineColor,
+      fill: true,
+      tension: 0.3,
+    }]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: "index", intersect: false },
+    plugins: { legend: { display: false }, tooltip: tip },
+    scales: {
+      x: { grid: { color: grid }, ticks: { color: ticks, maxTicksLimit: 10 } },
+      y: {
+        grid: { color: grid },
+        ticks: { color: ticks, callback: v => "LKR " + v.toFixed(2) }
+      }
+    }
+  }
+});
+
+/* volume chart */
+new Chart(document.getElementById("volChart"), {
+  type: "bar",
+  data: {
+    labels,
+    datasets: [{
+      label: "Volume",
+      data: volumes,
+      backgroundColor: "rgba(88,166,255,0.25)",
+      borderColor: "#58a6ff",
+      borderWidth: 1,
+      borderRadius: 3,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...tip, callbacks: { label: ctx => ctx.raw.toLocaleString() + " shares" } }
+    },
+    scales: {
+      x: { grid: { color: grid }, ticks: { color: ticks, maxTicksLimit: 10 } },
+      y: { grid: { color: grid }, ticks: { color: ticks, callback: v => v.toLocaleString() } }
+    }
+  }
+});
+</script>
+{% endblock %}
