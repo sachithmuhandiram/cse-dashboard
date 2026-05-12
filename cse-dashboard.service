@@ -1,0 +1,16 @@
+[Unit]
+Description=CSE Stock Dashboard (Flask)
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=sachith
+WorkingDirectory=/home/sachith/Documents/investments/cse/api/Colombo-Stock-Exchange-CSE-API-Documentation
+ExecStart=/usr/bin/python3 app.py
+Restart=on-failure
+RestartSec=5
+
+Environment=FLASK_ENV=production
+
+[Install]
+WantedBy=multi-user.target
