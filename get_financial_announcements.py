@@ -34,6 +34,17 @@ def get_financial_announcements(symbol: str = None) -> list[dict]:
     return items
 
 
+def _parse_date(raw: str) -> str:
+    """Parse CSE date strings into YYYY-MM-DD. Handles multiple formats."""
+    raw = str(raw).strip()
+    for fmt in ("%d %b %Y %I:%M:%S %p", "%d %b %Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+    return _date.today().isoformat()
+
+
 def save_announcements(items: list[dict], db_cfg: dict) -> int:
     """
     Upsert announcements into the DB. Returns number of new rows inserted.
@@ -51,11 +62,7 @@ def save_announcements(items: list[dict], db_cfg: dict) -> int:
             if not symbol:
                 continue
             raw_date = item.get("authorizedDate") or item.get("uploadedDate") or ""
-            try:
-                ann_date = str(raw_date)[:10]
-                _date.fromisoformat(ann_date)
-            except Exception:
-                ann_date = _date.today().isoformat()
+            ann_date = _parse_date(raw_date)
             rows.append((
                 sym_map.get(symbol),
                 symbol,
