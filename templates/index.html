@@ -22,24 +22,24 @@
 
 <div class="market-stats">
   <div class="market-stat">
-    <div class="m-label"><i class="bi bi-bar-chart-fill me-1"></i>Total Volume</div>
+    <div class="m-label"><i class="bi bi-bar-chart-fill me-1"></i>Market Volume</div>
     <div class="m-value">{{ market.total_vol | num }}</div>
-    <div class="m-sub">shares traded</div>
+    <div class="m-sub">all {{ market.listed_stocks }} CSE stocks</div>
   </div>
   <div class="market-stat">
-    <div class="m-label"><i class="bi bi-cash-stack me-1"></i>Total Turnover</div>
+    <div class="m-label"><i class="bi bi-cash-stack me-1"></i>Market Turnover</div>
     <div class="m-value">{{ market.total_turn | lkr }}</div>
-    <div class="m-sub">{{ market.stock_count }} tracked stocks</div>
+    <div class="m-sub">all {{ market.listed_stocks }} CSE stocks</div>
   </div>
   <div class="market-stat">
-    <div class="m-label"><i class="bi bi-arrow-left-right me-1"></i>Total Trades</div>
+    <div class="m-label"><i class="bi bi-arrow-left-right me-1"></i>Market Trades</div>
     <div class="m-value">{{ market.total_trades | num }}</div>
     <div class="m-sub">executions</div>
   </div>
   <div class="market-stat">
     <div class="m-label"><i class="bi bi-calendar3 me-1"></i>Data Date</div>
     <div class="m-value" style="font-size:0.95rem">{{ market.last_date }}</div>
-    <div class="m-sub">last trading day</div>
+    <div class="m-sub">watchlist last trade</div>
   </div>
   {% if announcements %}
   <div class="market-stat">

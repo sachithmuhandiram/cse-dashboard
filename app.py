@@ -4,6 +4,8 @@ from datetime import date, datetime
 import mysql.connector
 import json
 import logging
+import requests
+import time
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -35,6 +37,37 @@ TRACKED_PREFIXES  = {s.split(".")[0].upper() for s in TRACKED_SYMBOLS}
 SL_TZ             = pytz.timezone("Asia/Colombo")
 UNUSUAL_MULT      = 2.0   # 2× 20-day average triggers amber
 UNUSUAL_PRICE_PCT = 5.0   # ±5% price change triggers amber
+
+
+# ─── Market totals cache (5-min TTL) ──────────────────────────────────────────
+
+_market_cache: dict = {"data": None, "ts": 0.0}
+_CACHE_TTL = 300  # seconds
+
+
+def get_cse_market_totals() -> dict:
+    """Fetch total volume, turnover, and trades across all CSE stocks via tradeSummary.
+    Result is cached for 5 minutes to avoid API hammering on every page load."""
+    now = time.time()
+    if _market_cache["data"] and now - _market_cache["ts"] < _CACHE_TTL:
+        return _market_cache["data"]
+    try:
+        resp = requests.post("https://www.cse.lk/api/tradeSummary", timeout=10)
+        resp.raise_for_status()
+        items = resp.json().get("reqTradeSummery", [])
+        totals = {
+            "total_vol":    sum(int(i.get("sharevolume") or 0) for i in items),
+            "total_turn":   sum(float(i.get("turnover")   or 0) for i in items),
+            "total_trades": sum(int(i.get("tradevolume")  or 0) for i in items),
+            "listed_stocks": len(items),
+            "source": "live",
+        }
+        _market_cache["data"] = totals
+        _market_cache["ts"]   = now
+        return totals
+    except Exception as exc:
+        log.warning("Market totals fetch failed: %s", exc)
+        return {"total_vol": 0, "total_turn": 0, "total_trades": 0, "listed_stocks": 0, "source": "error"}
 
 
 # ─── DB helper ─────────────────────────────────────────────────────────────────
@@ -224,7 +257,6 @@ def index():
         """)
 
         stocks = []
-        total_vol = total_turn = total_trades = 0
 
         for r in cur.fetchall():
             close    = float(r["close_price"]) if r["close_price"] else None
@@ -243,10 +275,6 @@ def index():
             vol_unusual   = bool(avg_vol  and vol  > avg_vol  * UNUSUAL_MULT)
             turn_unusual  = bool(avg_turn and turn > avg_turn * UNUSUAL_MULT)
             price_unusual = bool(change_pct is not None and abs(change_pct) >= UNUSUAL_PRICE_PCT)
-
-            total_vol    += vol
-            total_turn   += turn
-            total_trades += trades
 
             stocks.append({
                 "symbol":        r["symbol"],
@@ -291,13 +319,16 @@ def index():
         for fi in fetch_info.values():
             fi["last_ok"] = str(fi["last_ok"])[:16] if fi["last_ok"] else None
 
+    cse_totals = get_cse_market_totals()
     market = {
-        "total_vol":    total_vol,
-        "total_turn":   total_turn,
-        "total_trades": total_trades,
-        "stock_count":  len(stocks),
-        "last_date":    stocks[0]["trade_date"] if stocks else "—",
-        "fetch_info":   fetch_info,
+        "total_vol":     cse_totals["total_vol"],
+        "total_turn":    cse_totals["total_turn"],
+        "total_trades":  cse_totals["total_trades"],
+        "listed_stocks": cse_totals["listed_stocks"],
+        "stock_count":   len(stocks),
+        "last_date":     stocks[0]["trade_date"] if stocks else "—",
+        "fetch_info":    fetch_info,
+        "totals_source": cse_totals["source"],
     }
 
     return render_template("index.html", stocks=stocks, market=market, announcements=announcements)
