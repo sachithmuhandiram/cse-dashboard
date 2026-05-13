@@ -2,108 +2,162 @@
 {% block title %}Market Overview — CSE Dashboard{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-end mb-4">
-  <div>
-    <h4 class="mb-0 fw-bold">Market Overview</h4>
-    <small class="text-muted">{{ stocks | length }} stocks &mdash; click a row to explore</small>
-  </div>
+
+<!-- ── Market Summary ─────────────────────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0 fw-bold">Market Overview</h5>
+  <span class="text-muted small">
+    {% if market.fetch_info.daily_data and market.fetch_info.daily_data.last_ok %}
+      Last fetched: {{ market.fetch_info.daily_data.last_ok }}
+      {% if market.fetch_info.daily_data.errors_today %}
+        <span class="ms-2" style="color:var(--red)"><i class="bi bi-exclamation-triangle-fill"></i> errors today</span>
+      {% else %}
+        <span class="ms-2" style="color:var(--green)"><i class="bi bi-check-circle-fill"></i></span>
+      {% endif %}
+    {% else %}
+      <span style="color:var(--muted)">No fetch recorded yet</span>
+    {% endif %}
+  </span>
 </div>
 
-<!-- Stock table -->
-<div class="card mb-4">
-  <div class="card-header">
-    <span class="label">Stocks</span>
+<div class="market-stats">
+  <div class="market-stat">
+    <div class="m-label"><i class="bi bi-bar-chart-fill me-1"></i>Total Volume</div>
+    <div class="m-value">{{ market.total_vol | num }}</div>
+    <div class="m-sub">shares traded</div>
   </div>
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead>
-        <tr>
-          <th>Symbol</th>
-          <th>Company</th>
-          <th class="text-end">Close (LKR)</th>
-          <th class="text-end">Change</th>
-          <th class="text-end">Chg %</th>
-          <th class="text-end">High</th>
-          <th class="text-end">Low</th>
-          <th class="text-end">Volume</th>
-          <th class="text-end">Turnover</th>
-          <th class="text-end">Trades</th>
-          <th class="text-end">Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for s in stocks %}
-        {% set up = s.change is not none and s.change >= 0 %}
-        {% set dn = s.change is not none and s.change < 0 %}
-        <tr style="cursor:pointer" onclick="location.href='/stock/{{ s.symbol }}'">
-          <td>
-            <a href="/stock/{{ s.symbol }}" class="fw-semibold" onclick="event.stopPropagation()">
-              {{ s.symbol }}
-            </a>
-          </td>
-          <td class="text-muted">{{ s.name }}</td>
-          <td class="text-end fw-semibold">
-            {% if s.close_price %}{{ "%.2f" | format(s.close_price) }}{% else %}—{% endif %}
-          </td>
-          <td class="text-end">
-            {% if s.change is not none %}
-              <span class="{{ 'chg-up' if up else 'chg-down' }}">
-                {{ "%+.2f" | format(s.change) }}
-              </span>
-            {% else %}—{% endif %}
-          </td>
-          <td class="text-end">
-            {% if s.change_pct is not none %}
-              <span class="{{ 'pct-up' if up else 'pct-down' }}">
-                {{ "%+.2f%%" | format(s.change_pct) }}
-              </span>
-            {% else %}—{% endif %}
-          </td>
-          <td class="text-end text-muted">{{ "%.2f" | format(s.high_price) if s.high_price else "—" }}</td>
-          <td class="text-end text-muted">{{ "%.2f" | format(s.low_price)  if s.low_price  else "—" }}</td>
-          <td class="text-end text-muted">{{ s.volume | num }}</td>
-          <td class="text-end text-muted">{{ s.turnover | lkr }}</td>
-          <td class="text-end text-muted">{{ s.trades | num }}</td>
-          <td class="text-end text-muted small">{{ s.trade_date }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="market-stat">
+    <div class="m-label"><i class="bi bi-cash-stack me-1"></i>Total Turnover</div>
+    <div class="m-value">{{ market.total_turn | lkr }}</div>
+    <div class="m-sub">{{ market.stock_count }} tracked stocks</div>
   </div>
+  <div class="market-stat">
+    <div class="m-label"><i class="bi bi-arrow-left-right me-1"></i>Total Trades</div>
+    <div class="m-value">{{ market.total_trades | num }}</div>
+    <div class="m-sub">executions</div>
+  </div>
+  <div class="market-stat">
+    <div class="m-label"><i class="bi bi-calendar3 me-1"></i>Data Date</div>
+    <div class="m-value" style="font-size:0.95rem">{{ market.last_date }}</div>
+    <div class="m-sub">last trading day</div>
+  </div>
+  {% if announcements %}
+  <div class="market-stat">
+    <div class="m-label"><i class="bi bi-megaphone-fill me-1"></i>Announcements</div>
+    <div class="m-value">{{ announcements | length }}</div>
+    <div class="m-sub">tracked stocks</div>
+  </div>
+  {% endif %}
 </div>
 
-<!-- Events -->
-{% if events %}
+<!-- ── Watchlist Cards ────────────────────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0 fw-bold">Watchlist</h5>
+  <span class="text-muted small">{{ stocks | length }} stocks &mdash; click to explore</span>
+</div>
+
+<div class="stock-grid">
+{% for s in stocks %}
+{% set up = s.change is not none and s.change >= 0 %}
+{% set dn = s.change is not none and s.change < 0 %}
+<a href="/stock/{{ s.symbol }}" class="stock-card {{ 'amber' if s.unusual else '' }}">
+
+  <div class="sc-header">
+    <span class="sc-symbol">{{ s.symbol }}</span>
+    {% if s.unusual %}
+    <span class="amber-badge">
+      <i class="bi bi-exclamation-triangle-fill"></i> unusual
+    </span>
+    {% endif %}
+  </div>
+
+  <div class="sc-name" title="{{ s.name }}">{{ s.name }}</div>
+
+  <div class="sc-price">
+    {% if s.close_price %}{{ "%.2f" | format(s.close_price) }}{% else %}—{% endif %}
+  </div>
+
+  <div class="sc-change">
+    {% if s.change is not none %}
+      <span class="{{ 'chg-up' if up else 'chg-down' }}">
+        <i class="bi {{ 'bi-arrow-up-right' if up else 'bi-arrow-down-right' }}"></i>
+        {{ "%+.2f" | format(s.change) }}
+      </span>
+      <span class="{{ 'pct-up ms-1' if up else 'pct-down ms-1' }}">
+        {{ "%+.2f%%" | format(s.change_pct) }}
+        {% if s.price_unusual %}<i class="bi bi-exclamation-triangle-fill ms-1" style="color:var(--yellow)"></i>{% endif %}
+      </span>
+    {% else %}
+      <span class="text-muted">No change data</span>
+    {% endif %}
+  </div>
+
+  <div class="sc-stats">
+    <div class="sc-row">
+      <span class="sl">Volume</span>
+      <span class="sv">
+        {{ s.volume | num }}
+        {% if s.vol_unusual %}<span class="amber-badge ms-1">⚠</span>{% endif %}
+      </span>
+    </div>
+    <div class="sc-row">
+      <span class="sl">Turnover</span>
+      <span class="sv">
+        {{ s.turnover | lkr }}
+        {% if s.turn_unusual %}<span class="amber-badge ms-1">⚠</span>{% endif %}
+      </span>
+    </div>
+    <div class="sc-row">
+      <span class="sl">Trades</span>
+      <span class="sv">{{ s.trades | num }}</span>
+    </div>
+    {% if s.high_price or s.low_price %}
+    <div class="sc-hl">
+      <span>H: {{ "%.2f" | format(s.high_price) if s.high_price else "—" }}</span>
+      <span>L: {{ "%.2f" | format(s.low_price)  if s.low_price  else "—" }}</span>
+    </div>
+    {% endif %}
+  </div>
+
+</a>
+{% endfor %}
+</div>
+
+<!-- ── Announcements ──────────────────────────────────────────────────────── -->
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <span class="label">Trigger Events</span>
-    <span class="text-muted small">{{ events | length }} recent</span>
+    <span class="label"><i class="bi bi-megaphone-fill me-1"></i>CSE Announcements</span>
+    <span class="text-muted small">
+      tracked stocks only
+      {% if market.fetch_info.announcements and market.fetch_info.announcements.last_ok %}
+        &mdash; last fetched {{ market.fetch_info.announcements.last_ok }}
+      {% endif %}
+    </span>
   </div>
+  {% if announcements %}
   <div class="table-responsive">
     <table class="table table-hover">
       <thead>
         <tr>
           <th>Date</th>
           <th>Symbol</th>
-          <th>Company</th>
-          <th>Event</th>
+          <th>Announcement</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
-        {% for e in events %}
+        {% for a in announcements %}
         <tr>
-          <td class="text-muted small">{{ e.date }}</td>
-          <td><a href="/stock/{{ e.symbol }}">{{ e.symbol }}</a></td>
-          <td class="text-muted">{{ e.name }}</td>
+          <td class="text-muted small" style="white-space:nowrap">{{ a.ann_date }}</td>
           <td>
-            {% if e.kind == "volume" %}
-              <span class="ev-volume"><i class="bi bi-bar-chart-fill me-1"></i>{{ e.title }}</span>
-            {% elif e.kind == "price_up" %}
-              <span class="ev-up"><i class="bi bi-arrow-up-right me-1"></i>{{ e.title }}</span>
-            {% elif e.kind == "price_down" %}
-              <span class="ev-down"><i class="bi bi-arrow-down-right me-1"></i>{{ e.title }}</span>
-            {% else %}
-              {{ e.title }}
+            <a href="/stock/{{ a.symbol }}" class="fw-semibold">{{ a.symbol }}</a>
+          </td>
+          <td style="max-width:500px">{{ a.title }}</td>
+          <td>
+            {% if a.pdf_url %}
+            <a href="{{ a.pdf_url }}" target="_blank" rel="noopener" class="text-muted small">
+              <i class="bi bi-file-earmark-pdf"></i> PDF
+            </a>
             {% endif %}
           </td>
         </tr>
@@ -111,6 +165,11 @@
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="p-3 text-muted small">
+    No announcements yet for tracked stocks. Fetched automatically at 9:00 AM daily.
+  </div>
+  {% endif %}
 </div>
-{% endif %}
+
 {% endblock %}

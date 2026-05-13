@@ -1,5 +1,6 @@
 import requests
-from datetime import datetime
+import mysql.connector
+from datetime import datetime, date as _date
 
 BASE_URL = "https://www.cse.lk/api/"
 CDN_BASE  = "https://cdn.cse.lk/"
@@ -31,6 +32,51 @@ def get_financial_announcements(symbol: str = None) -> list[dict]:
         ]
 
     return items
+
+
+def save_announcements(items: list[dict], db_cfg: dict) -> int:
+    """
+    Upsert announcements into the DB. Returns number of new rows inserted.
+    Only saves items that have a symbol; ignores duplicates via UNIQUE KEY.
+    """
+    conn = mysql.connector.connect(**db_cfg)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT symbol, id FROM stocks")
+        sym_map = {row[0]: row[1] for row in cur.fetchall()}
+
+        rows = []
+        for item in items:
+            symbol = (item.get("symbol") or "").strip()
+            if not symbol:
+                continue
+            raw_date = item.get("authorizedDate") or item.get("uploadedDate") or ""
+            try:
+                ann_date = str(raw_date)[:10]
+                _date.fromisoformat(ann_date)
+            except Exception:
+                ann_date = _date.today().isoformat()
+            rows.append((
+                sym_map.get(symbol),
+                symbol,
+                (item.get("name") or "")[:200],
+                (item.get("fileText") or "Announcement")[:500],
+                ann_date,
+                (CDN_BASE + item["path"]) if item.get("path") else None,
+            ))
+
+        if not rows:
+            return 0
+        cur.executemany(
+            "INSERT IGNORE INTO announcements "
+            "(stock_id, symbol, company, title, ann_date, pdf_url) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
+            rows,
+        )
+        conn.commit()
+        return cur.rowcount
+    finally:
+        conn.close()
 
 
 def format_announcement(item: dict) -> str:

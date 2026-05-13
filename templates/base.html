@@ -19,42 +19,83 @@
       --red: #f85149;
       --blue: #58a6ff;
       --yellow: #d29922;
+      --amber-bg: rgba(210,153,34,0.12);
+      --amber-border: rgba(210,153,34,0.55);
     }
     * { box-sizing: border-box; }
     body { background: var(--bg0); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
     a { color: var(--blue); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    /* Nav */
+    /* ── Nav ── */
     .topnav { background: var(--bg1); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
     .topnav-brand { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text); }
     .topnav-brand i { color: var(--green); }
 
-    /* Cards */
+    /* ── Generic card ── */
     .card { background: var(--bg1); border: 1px solid var(--border); border-radius: 8px; }
     .card-header { background: transparent; border-bottom: 1px solid var(--border); padding: 0.6rem 1rem; }
     .card-header .label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 
-    /* Table */
+    /* ── Table ── */
     .table { color: var(--text); margin-bottom: 0; }
     .table thead th { border-color: var(--border); color: var(--muted); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.6rem 1rem; }
     .table tbody td { border-color: var(--border); padding: 0.65rem 1rem; vertical-align: middle; font-size: 0.9rem; }
     .table-hover tbody tr:hover td { background: var(--bg2); }
 
-    /* Badges */
-    .ev-volume  { background: rgba(210,153,34,0.2);  color: var(--yellow); padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; }
-    .ev-up      { background: rgba(63,185,80,0.15);  color: var(--green);  padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; }
-    .ev-down    { background: rgba(248,81,73,0.15);  color: var(--red);    padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; }
-    .chg-up     { color: var(--green); }
-    .chg-down   { color: var(--red); }
-    .pct-up     { background: rgba(63,185,80,0.15);  color: var(--green);  padding: 1px 7px; border-radius: 4px; font-size: 0.8rem; }
-    .pct-down   { background: rgba(248,81,73,0.15);  color: var(--red);    padding: 1px 7px; border-radius: 4px; font-size: 0.8rem; }
+    /* ── Change badges ── */
+    .ev-volume { background: rgba(210,153,34,0.2); color: var(--yellow); padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; }
+    .ev-up     { background: rgba(63,185,80,0.15);  color: var(--green);  padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; }
+    .ev-down   { background: rgba(248,81,73,0.15);  color: var(--red);    padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; }
+    .chg-up    { color: var(--green); }
+    .chg-down  { color: var(--red); }
+    .pct-up    { background: rgba(63,185,80,0.15);  color: var(--green);  padding: 1px 7px; border-radius: 4px; font-size: 0.8rem; }
+    .pct-down  { background: rgba(248,81,73,0.15);  color: var(--red);    padding: 1px 7px; border-radius: 4px; font-size: 0.8rem; }
 
-    /* Stat cards */
+    /* ── Stat box (used in stock detail) ── */
     .stat-box { background: var(--bg1); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.1rem; }
-    .stat-box .label { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.25rem; }
+    .stat-box .label { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.04em; }
     .stat-box .value { font-size: 1rem; font-weight: 600; }
 
+    /* ── Market summary stat boxes ── */
+    .market-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .market-stat { background: var(--bg1); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; }
+    .market-stat .m-label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.3rem; }
+    .market-stat .m-value { font-size: 1.05rem; font-weight: 700; }
+    .market-stat .m-sub   { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
+
+    /* ── Stock cards ── */
+    .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+
+    .stock-card {
+      background: var(--bg1);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      display: block;
+      color: var(--text);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .stock-card:hover { border-color: var(--blue); background: var(--bg2); color: var(--text); text-decoration: none; }
+    .stock-card.amber { border-color: var(--amber-border); background: var(--amber-bg); }
+    .stock-card.amber:hover { border-color: var(--yellow); }
+
+    .sc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
+    .sc-symbol { font-weight: 700; font-size: 0.82rem; color: var(--blue); }
+    .sc-name   { font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.55rem; }
+    .sc-price  { font-size: 1.45rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.15rem; }
+    .sc-change { font-size: 0.82rem; margin-bottom: 0.6rem; }
+
+    .sc-stats { border-top: 1px solid var(--border); padding-top: 0.55rem; margin-top: 0.3rem; }
+    .sc-row   { display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 0.18rem; }
+    .sc-row .sl { color: var(--muted); }
+    .sc-row .sv { color: var(--text); font-weight: 500; }
+    .sc-hl    { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); margin-top: 0.3rem; border-top: 1px solid var(--border); padding-top: 0.3rem; }
+
+    /* ── Amber badge ── */
+    .amber-badge { background: rgba(210,153,34,0.22); color: var(--yellow); border-radius: 3px; font-size: 0.65rem; padding: 1px 4px; font-weight: 700; white-space: nowrap; }
+
+    /* ── Utility ── */
     .text-muted { color: var(--muted) !important; }
     .breadcrumb-item + .breadcrumb-item::before { color: var(--muted); }
     .breadcrumb-item.active { color: var(--muted); }
