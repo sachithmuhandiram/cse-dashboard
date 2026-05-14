@@ -31,7 +31,7 @@ DB_CONFIG = {
 TRACKED_SYMBOLS = [
     "AEL.N0000", "COMB.X0000", "CTEA.N0000", "DIAL.N0000",
     "HHL.N0000", "HNB.X0000", "JKH.N0000", "LFIN.N0000",
-    "PINS.N0000", "PLC.N0000", "SUN.N0000",
+    "NTB.X0000", "PINS.N0000", "PLC.N0000", "SUN.N0000",
 ]
 TRACKED_PREFIXES  = {s.split(".")[0].upper() for s in TRACKED_SYMBOLS}
 SL_TZ             = pytz.timezone("Asia/Colombo")
