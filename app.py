@@ -155,8 +155,12 @@ def run_announcement_fetch():
 
 
 def startup_backfill():
-    """On startup, detect missing trading days and backfill."""
+    """On startup, detect missing trading days and backfill. Also catch any missed scheduled jobs."""
     log.info("Startup: checking for data gaps...")
+
+    if not _today_fetched("announcements"):
+        log.info("Announcements not fetched today — running now")
+        run_announcement_fetch()
     try:
         with get_db() as conn:
             cur = conn.cursor()
@@ -172,7 +176,15 @@ def startup_backfill():
 
         gap = (today - last_date).days
         if gap <= 3:  # weekend gap tolerance
-            log.info("Data current (last: %s)", last_date)
+            now_sl = datetime.now(SL_TZ)
+            after_close = now_sl.weekday() < 5 and (
+                now_sl.hour > 15 or (now_sl.hour == 15 and now_sl.minute >= 30)
+            )
+            if after_close and not _today_fetched("daily_data"):
+                log.info("Market closed, fetching today's data (last: %s)", last_date)
+                run_daily_fetch(period=2)
+            else:
+                log.info("Data current (last: %s)", last_date)
             return
 
         log.info("Gap of %d days since %s — backfilling", gap, last_date)
@@ -412,10 +424,10 @@ if __name__ == "__main__":
     # Hourly safety net: fetch if market is closed and today's data is missing
     scheduler.add_job(hourly_check, IntervalTrigger(hours=1), id="hourly_check")
 
-    # Daily announcement fetch at 9:00 AM SL time
+    # Announcement fetch at 9 AM, 12 PM, 3 PM SL time
     scheduler.add_job(
         run_announcement_fetch,
-        CronTrigger(hour=9, minute=0, timezone=SL_TZ),
+        CronTrigger(hour="9,12,15", minute=0, timezone=SL_TZ),
         id="ann_fetch",
     )
 

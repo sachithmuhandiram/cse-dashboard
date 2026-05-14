@@ -1,0 +1,17 @@
+[Unit]
+Description=CSE MySQL Docker Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+Restart=always
+RestartSec=5
+ExecStartPre=-/usr/bin/docker rm -f cse-mysql
+ExecStart=/usr/bin/docker run --name cse-mysql \
+    -p 3306:3306 \
+    -v /home/sachith/Documents/Learning/ticket/support_ticket/db:/var/lib/mysql \
+    mysql:latest
+ExecStop=/usr/bin/docker stop cse-mysql
+
+[Install]
+WantedBy=multi-user.target

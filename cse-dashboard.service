@@ -1,6 +1,7 @@
 [Unit]
 Description=CSE Stock Dashboard (Flask)
-After=network.target mysql.service
+After=network.target cse-mysql.service
+Wants=cse-mysql.service
 
 [Service]
 Type=simple
