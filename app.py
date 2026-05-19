@@ -14,6 +14,7 @@ import pytz
 
 from get_daily_trades import fetch_and_save as _fetch_stock
 from get_financial_announcements import get_financial_announcements, save_announcements
+from fetch_gold_price import fetch_gold_price
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ DB_CONFIG = {
 }
 
 TRACKED_SYMBOLS = [
-    "AEL.N0000", "COMB.X0000", "CTEA.N0000", "DIAL.N0000",
+    "AEL.N0000", "CIC.X0000", "COMB.X0000", "CTEA.N0000", "DIAL.N0000",
     "HHL.N0000", "HNB.X0000", "JKH.N0000", "LFIN.N0000",
     "NTB.X0000", "PINS.N0000", "PLC.N0000", "SUN.N0000",
 ]
@@ -37,6 +38,30 @@ TRACKED_PREFIXES  = {s.split(".")[0].upper() for s in TRACKED_SYMBOLS}
 SL_TZ             = pytz.timezone("Asia/Colombo")
 UNUSUAL_MULT      = 2.0   # 2× 20-day average triggers amber
 UNUSUAL_PRICE_PCT = 5.0   # ±5% price change triggers amber
+
+RATING_CSS = {
+    "Strong Buy":  "rb-strong-buy",
+    "Accumulate":  "rb-accumulate",
+    "Hold":        "rb-hold",
+    "Trim":        "rb-trim",
+    "Take Profit": "rb-take-profit",
+    "Exit":        "rb-exit",
+}
+
+
+def get_rating(price, bands):
+    """Returns (label, css_class, price_min, price_max) for the matching band, else all None."""
+    if not price or not bands:
+        return None, None, None, None
+    for b in bands:
+        mn = float(b["price_min"])
+        mx = float(b["price_max"]) if b["price_max"] is not None else None
+        if mx is None:
+            if price >= mn:
+                return b["label"], RATING_CSS.get(b["label"]), mn, mx
+        elif mn <= price < mx:
+            return b["label"], RATING_CSS.get(b["label"]), mn, mx
+    return None, None, None, None
 
 
 # ─── Market totals cache (5-min TTL) ──────────────────────────────────────────
@@ -138,6 +163,49 @@ def hourly_check():
         run_daily_fetch()
 
 
+def ensure_gold_table():
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS gold_prices (
+                id                 INT            NOT NULL AUTO_INCREMENT,
+                date               DATE           NOT NULL,
+                price_8g_22k       DECIMAL(12,2)  NOT NULL,
+                price_per_gram_22k DECIMAL(12,2),
+                fetched_at         DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_gold_date (date)
+            )
+        """)
+        conn.commit()
+
+
+def run_gold_price_fetch():
+    log.info("Fetching 22K gold price from ideabeam.com")
+    price_8g, price_per_gram = fetch_gold_price()
+    if price_8g is None:
+        log.warning("Gold price not found on page")
+        _log_fetch("gold_price", date.today(), "error", "price not found")
+        return
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO gold_prices (date, price_8g_22k, price_per_gram_22k)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    price_8g_22k       = VALUES(price_8g_22k),
+                    price_per_gram_22k = VALUES(price_per_gram_22k),
+                    fetched_at         = CURRENT_TIMESTAMP
+            """, (date.today(), price_8g, price_per_gram))
+            conn.commit()
+        _log_fetch("gold_price", date.today(), "ok", f"8g={price_8g}")
+        log.info("Gold price saved: 8g=%.0f, per_gram=%s", price_8g, price_per_gram)
+    except Exception as exc:
+        log.error("Gold price save failed: %s", exc)
+        _log_fetch("gold_price", date.today(), "error", str(exc))
+
+
 def run_announcement_fetch():
     log.info("Fetching CSE announcements")
     try:
@@ -157,6 +225,11 @@ def run_announcement_fetch():
 def startup_backfill():
     """On startup, detect missing trading days and backfill. Also catch any missed scheduled jobs."""
     log.info("Startup: checking for data gaps...")
+
+    ensure_gold_table()
+    if not _today_fetched("gold_price"):
+        log.info("Gold price not fetched today — running now")
+        run_gold_price_fetch()
 
     if not _today_fetched("announcements"):
         log.info("Announcements not fetched today — running now")
@@ -238,6 +311,16 @@ def index():
         cur = conn.cursor(dictionary=True)
 
         cur.execute("""
+            SELECT s.symbol, t.label, t.price_min, t.price_max, t.sort_order
+            FROM stock_targets t
+            JOIN stocks s ON s.id = t.stock_id
+            ORDER BY s.symbol, t.sort_order
+        """)
+        all_targets: dict = {}
+        for row in cur.fetchall():
+            all_targets.setdefault(row["symbol"], []).append(row)
+
+        cur.execute("""
             SELECT s.symbol, s.name,
                    d1.date        AS trade_date,
                    d1.close_price, d1.volume, d1.turnover,
@@ -288,6 +371,8 @@ def index():
             turn_unusual  = bool(avg_turn and turn > avg_turn * UNUSUAL_MULT)
             price_unusual = bool(change_pct is not None and abs(change_pct) >= UNUSUAL_PRICE_PCT)
 
+            rating, rating_css, rating_min, rating_max = get_rating(close, all_targets.get(r["symbol"], []))
+
             stocks.append({
                 "symbol":        r["symbol"],
                 "name":          r["name"],
@@ -305,6 +390,10 @@ def index():
                 "vol_unusual":   vol_unusual,
                 "turn_unusual":  turn_unusual,
                 "price_unusual": price_unusual,
+                "rating":        rating,
+                "rating_css":    rating_css,
+                "rating_min":    rating_min,
+                "rating_max":    rating_max,
             })
 
         cur.execute("""
@@ -331,6 +420,25 @@ def index():
         for fi in fetch_info.values():
             fi["last_ok"] = str(fi["last_ok"])[:16] if fi["last_ok"] else None
 
+        cur.execute("""
+            SELECT date, price_8g_22k, price_per_gram_22k
+            FROM gold_prices
+            ORDER BY date DESC
+            LIMIT 2
+        """)
+        gold_rows = cur.fetchall()
+        gold_today = gold_prev = None
+        if gold_rows:
+            g = gold_rows[0]
+            gold_today = {
+                "date":             str(g["date"]),
+                "price_8g_22k":     float(g["price_8g_22k"]),
+                "price_per_gram_22k": float(g["price_per_gram_22k"]) if g["price_per_gram_22k"] else None,
+            }
+        if len(gold_rows) > 1:
+            g2 = gold_rows[1]
+            gold_prev = {"price_8g_22k": float(g2["price_8g_22k"])}
+
     cse_totals = get_cse_market_totals()
     market = {
         "total_vol":     cse_totals["total_vol"],
@@ -343,7 +451,13 @@ def index():
         "totals_source": cse_totals["source"],
     }
 
-    return render_template("index.html", stocks=stocks, market=market, announcements=announcements)
+    gold_change = gold_change_pct = None
+    if gold_today and gold_prev:
+        gold_change     = round(gold_today["price_8g_22k"] - gold_prev["price_8g_22k"], 2)
+        gold_change_pct = round(gold_change / gold_prev["price_8g_22k"] * 100, 2)
+
+    return render_template("index.html", stocks=stocks, market=market, announcements=announcements,
+                           gold=gold_today, gold_change=gold_change, gold_change_pct=gold_change_pct)
 
 
 @app.route("/stock/<symbol>")
@@ -400,6 +514,23 @@ def stock_detail(symbol):
             a["seen_at"]  = str(a["seen_at"])[:16]
             announcements.append(a)
 
+        cur.execute("""
+            SELECT label, price_min, price_max, note, sort_order
+            FROM stock_targets
+            WHERE stock_id = %s
+            ORDER BY sort_order
+        """, (stock["id"],))
+        target_bands = [
+            {
+                "label":     row["label"],
+                "price_min": float(row["price_min"]),
+                "price_max": float(row["price_max"]) if row["price_max"] is not None else None,
+                "note":      row["note"],
+                "css":       RATING_CSS.get(row["label"], ""),
+            }
+            for row in cur.fetchall()
+        ]
+
     latest = history[-1] if history else {}
     prev_h = history[-2] if len(history) > 1 else {}
     if latest and prev_h and latest.get("close_price") and prev_h.get("close_price"):
@@ -408,11 +539,50 @@ def stock_detail(symbol):
     else:
         change = change_pct = None
 
+    latest_price = latest.get("close_price") if latest else None
+    rating, rating_css, _, _ = get_rating(latest_price, target_bands)
+
     return render_template("stock.html",
                            stock=stock,
                            history_json=json.dumps(history),
                            events=events,
                            announcements=announcements,
+                           latest=latest,
+                           change=change,
+                           change_pct=change_pct,
+                           target_bands=target_bands,
+                           rating=rating,
+                           rating_css=rating_css)
+
+
+@app.route("/gold")
+def gold_detail():
+    with get_db() as conn:
+        cur = conn.cursor(dictionary=True)
+        cur.execute("""
+            SELECT date, price_8g_22k, price_per_gram_22k
+            FROM gold_prices
+            WHERE date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+            ORDER BY date ASC
+        """)
+        history = []
+        for row in cur.fetchall():
+            history.append({
+                "date":              str(row["date"]),
+                "price_8g_22k":      float(row["price_8g_22k"]),
+                "price_per_gram_22k": float(row["price_per_gram_22k"]) if row["price_per_gram_22k"] else None,
+            })
+
+    latest = history[-1] if history else None
+    prev   = history[-2] if len(history) > 1 else None
+    change = change_pct = None
+    if latest and prev:
+        change     = round(latest["price_8g_22k"] - prev["price_8g_22k"], 2)
+        change_pct = round(change / prev["price_8g_22k"] * 100, 2)
+
+    return render_template("gold.html",
+                           history_json=json.dumps(history),
+                           history_len=len(history),
                            latest=latest,
                            change=change,
                            change_pct=change_pct)
@@ -429,6 +599,13 @@ if __name__ == "__main__":
         run_announcement_fetch,
         CronTrigger(hour="9,12,15", minute=0, timezone=SL_TZ),
         id="ann_fetch",
+    )
+
+    # Gold price fetch once per day at 10 AM SL time
+    scheduler.add_job(
+        run_gold_price_fetch,
+        CronTrigger(hour=10, minute=0, timezone=SL_TZ),
+        id="gold_fetch",
     )
 
     scheduler.start()

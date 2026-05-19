@@ -50,6 +50,61 @@
   {% endif %}
 </div>
 
+<!-- ── Commodities ────────────────────────────────────────────────────────── -->
+{% if gold %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0 fw-bold">Commodities</h5>
+  <span class="text-muted small">click to explore</span>
+</div>
+<div class="stock-grid" style="grid-template-columns: repeat(auto-fill, minmax(210px, 280px)); margin-bottom:1.5rem">
+
+  {% set gold_up = gold_change is not none and gold_change >= 0 %}
+  {% set gold_dn = gold_change is not none and gold_change < 0 %}
+  <a href="/gold" class="stock-card" style="border-color: rgba(210,153,34,0.35);">
+
+    <div class="sc-header">
+      <span class="sc-symbol" style="color:var(--yellow)">
+        <i class="bi bi-gem me-1"></i>22K Gold
+      </span>
+    </div>
+
+    <div class="sc-name">8g (1 Pawn) &middot; Sri Lanka</div>
+
+    <div class="sc-price" style="color:var(--yellow)">
+      Rs. {{ "{:,.0f}".format(gold.price_8g_22k) }}
+    </div>
+
+    <div class="sc-change">
+      {% if gold_change is not none %}
+        <span class="{{ 'chg-up' if gold_up else 'chg-down' }}">
+          <i class="bi {{ 'bi-arrow-up-right' if gold_up else 'bi-arrow-down-right' }}"></i>
+          {{ "%+,.0f" | format(gold_change) }}
+        </span>
+        <span class="{{ 'pct-up ms-1' if gold_up else 'pct-down ms-1' }}">
+          {{ "%+.2f%%" | format(gold_change_pct) }}
+        </span>
+      {% else %}
+        <span class="text-muted">No change data</span>
+      {% endif %}
+    </div>
+
+    <div class="sc-stats">
+      {% if gold.price_per_gram_22k %}
+      <div class="sc-row">
+        <span class="sl">Per gram</span>
+        <span class="sv">Rs. {{ "{:,.0f}".format(gold.price_per_gram_22k) }}</span>
+      </div>
+      {% endif %}
+      <div class="sc-row">
+        <span class="sl">As of</span>
+        <span class="sv">{{ gold.date }}</span>
+      </div>
+    </div>
+
+  </a>
+</div>
+{% endif %}
+
 <!-- ── Watchlist Cards ────────────────────────────────────────────────────── -->
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h5 class="mb-0 fw-bold">Watchlist</h5>
@@ -65,9 +120,7 @@
   <div class="sc-header">
     <span class="sc-symbol">{{ s.symbol }}</span>
     {% if s.unusual %}
-    <span class="amber-badge">
-      <i class="bi bi-exclamation-triangle-fill"></i> unusual
-    </span>
+    <span class="amber-badge"><i class="bi bi-exclamation-triangle-fill"></i> unusual</span>
     {% endif %}
   </div>
 
@@ -91,6 +144,16 @@
       <span class="text-muted">No change data</span>
     {% endif %}
   </div>
+
+  {% if s.rating %}
+  <div class="sc-target {{ s.rating_css }}">
+    <span>{{ s.rating }}</span>
+    <span class="sc-trange">
+      LKR {{ "%.0f" | format(s.rating_min) }}
+      {%- if s.rating_max %} – {{ "%.0f" | format(s.rating_max) }}{% else %}+{% endif %}
+    </span>
+  </div>
+  {% endif %}
 
   <div class="sc-stats">
     <div class="sc-row">

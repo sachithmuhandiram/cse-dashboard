@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}22K Gold Price — CSE Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+    <li class="breadcrumb-item active">22K Gold</li>
+  </ol>
+</nav>
+
+<!-- Header -->
+<div class="mb-4">
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <h3 class="mb-0 fw-bold" style="color:var(--yellow)">
+      <i class="bi bi-gem me-2"></i>22K Gold (8g)
+    </h3>
+    <span class="text-muted">1 Pawn &middot; Sri Lanka &middot; ideabeam.com</span>
+  </div>
+
+  {% if latest %}
+  <div class="d-flex align-items-baseline gap-3 mt-2 flex-wrap">
+    <span class="fw-bold" style="font-size:2rem; color:var(--yellow)">
+      Rs. {{ "{:,.0f}".format(latest.price_8g_22k) }}
+    </span>
+    {% if change is not none %}
+    {% set up = change >= 0 %}
+    <span class="{{ 'chg-up' if up else 'chg-down' }}" style="font-size:1.1rem">
+      <i class="bi {{ 'bi-arrow-up-right' if up else 'bi-arrow-down-right' }}"></i>
+      {{ "%+,.0f" | format(change) }}
+      <span class="{{ 'pct-up' if up else 'pct-down' }} ms-1">{{ "%+.2f%%" | format(change_pct) }}</span>
+    </span>
+    {% endif %}
+    <span class="text-muted small">as of {{ latest.date }}</span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Stat boxes -->
+{% if latest %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-md-3">
+    <div class="stat-box">
+      <div class="label">8g (1 Pawn) Price</div>
+      <div class="value" style="color:var(--yellow)">Rs. {{ "{:,.0f}".format(latest.price_8g_22k) }}</div>
+    </div>
+  </div>
+  {% if latest.price_per_gram_22k %}
+  <div class="col-6 col-sm-4 col-md-3">
+    <div class="stat-box">
+      <div class="label">Per Gram (22K)</div>
+      <div class="value">Rs. {{ "{:,.0f}".format(latest.price_per_gram_22k) }}</div>
+    </div>
+  </div>
+  {% endif %}
+  {% if change is not none %}
+  <div class="col-6 col-sm-4 col-md-3">
+    <div class="stat-box">
+      <div class="label">Day Change</div>
+      <div class="value {{ 'chg-up' if change >= 0 else 'chg-down' }}">
+        {{ "%+,.0f" | format(change) }}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-md-3">
+    <div class="stat-box">
+      <div class="label">Day Change %</div>
+      <div class="value {{ 'chg-up' if change >= 0 else 'chg-down' }}">
+        {{ "%+.2f%%" | format(change_pct) }}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Price chart -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="label"><i class="bi bi-graph-up me-1"></i>22K Gold 8g Price — Last 3 Months (LKR)</span>
+    <span class="text-muted small">{{ history_len }} data points</span>
+  </div>
+  <div class="card-body" style="padding:1.2rem">
+    {% if history_len > 0 %}
+    <canvas id="goldChart" style="max-height:320px"></canvas>
+    {% else %}
+    <p class="text-muted small mb-0">No price history yet. Prices are fetched daily at 10:00 AM.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Price history table -->
+{% if history_len > 0 %}
+<div class="card">
+  <div class="card-header">
+    <span class="label"><i class="bi bi-table me-1"></i>Price History</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>8g Price (Rs.)</th>
+          <th>Per Gram (Rs.)</th>
+          <th>Change</th>
+        </tr>
+      </thead>
+      <tbody id="historyTable"></tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const history = {{ history_json | safe }};
+if (history.length === 0) { }
+else {
+  const labels = history.map(r => r.date);
+  const prices = history.map(r => r.price_8g_22k);
+
+  const grid  = "rgba(48,54,61,0.8)";
+  const ticks = "#8b949e";
+  const tip   = { backgroundColor:"#1c2128", borderColor:"#30363d", borderWidth:1, titleColor:"#e6edf3", bodyColor:"#8b949e" };
+
+  const lineColor = prices.at(-1) >= prices[0] ? "#d29922" : "#f85149";
+  const fillColor = prices.at(-1) >= prices[0] ? "rgba(210,153,34,0.10)" : "rgba(248,81,73,0.08)";
+
+  new Chart(document.getElementById("goldChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "22K Gold 8g (Rs.)",
+        data: prices,
+        borderColor: lineColor,
+        backgroundColor: fillColor,
+        borderWidth: 2.5,
+        pointRadius: history.length > 60 ? 0 : 3,
+        pointBackgroundColor: lineColor,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false }, tooltip: { ...tip, callbacks: {
+        label: ctx => "Rs. " + ctx.raw.toLocaleString()
+      }}},
+      scales: {
+        x: { grid: { color: grid }, ticks: { color: ticks, maxTicksLimit: 8 } },
+        y: {
+          grid: { color: grid },
+          ticks: { color: ticks, callback: v => "Rs. " + v.toLocaleString() }
+        }
+      }
+    }
+  });
+
+  /* populate table in reverse chronological order */
+  const tbody = document.getElementById("historyTable");
+  const rev = [...history].reverse();
+  rev.forEach((r, i) => {
+    const prev = rev[i + 1];
+    const chg  = prev ? r.price_8g_22k - prev.price_8g_22k : null;
+    const up   = chg !== null && chg >= 0;
+    const cls  = chg === null ? "" : up ? "chg-up" : "chg-down";
+    const icon = chg === null ? "" : `<i class="bi bi-arrow-${up ? "up" : "down"}-right me-1"></i>`;
+    const chgStr = chg === null ? "—"
+      : `<span class="${cls}">${icon}${chg >= 0 ? "+" : ""}${chg.toLocaleString()}</span>`;
+    const perGram = r.price_per_gram_22k ? r.price_per_gram_22k.toLocaleString() : "—";
+    tbody.insertAdjacentHTML("beforeend", `
+      <tr>
+        <td class="text-muted small">${r.date}</td>
+        <td class="fw-semibold">Rs. ${r.price_8g_22k.toLocaleString()}</td>
+        <td>Rs. ${perGram}</td>
+        <td>${chgStr}</td>
+      </tr>
+    `);
+  });
+}
+</script>
+{% endblock %}
