@@ -67,6 +67,7 @@ def get_rating(price, bands):
 # ─── Market totals cache (5-min TTL) ──────────────────────────────────────────
 
 _market_cache: dict = {"data": None, "ts": 0.0}
+_gold_nav_cache: dict = {"data": None, "ts": 0.0}
 _CACHE_TTL = 300  # seconds
 
 
@@ -264,6 +265,28 @@ def startup_backfill():
         run_daily_fetch(period=3 if gap <= 30 else 5)
     except Exception as exc:
         log.error("Backfill check failed: %s", exc)
+
+
+# ─── nav gold context processor ────────────────────────────────────────────────
+
+@app.context_processor
+def inject_nav_gold():
+    now = time.time()
+    if _gold_nav_cache["data"] and now - _gold_nav_cache["ts"] < 3600:
+        return {"nav_gold": _gold_nav_cache["data"]}
+    try:
+        with get_db() as conn:
+            cur = conn.cursor(dictionary=True)
+            cur.execute("SELECT price_8g_22k, date FROM gold_prices ORDER BY date DESC LIMIT 1")
+            row = cur.fetchone()
+            if row:
+                data = {"price": float(row["price_8g_22k"]), "date": str(row["date"])}
+                _gold_nav_cache["data"] = data
+                _gold_nav_cache["ts"]   = now
+                return {"nav_gold": data}
+    except Exception:
+        pass
+    return {"nav_gold": None}
 
 
 # ─── template filters ──────────────────────────────────────────────────────────

@@ -86,6 +86,9 @@
     .sc-price  { font-size: 1.45rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.15rem; }
     .sc-change { font-size: 0.82rem; margin-bottom: 0.6rem; }
 
+    .sc-target { display: flex; justify-content: space-between; align-items: center; padding: 0.28rem 0.55rem; border-radius: 4px; font-size: 0.76rem; font-weight: 700; margin: 0.4rem 0 0.5rem; }
+    .sc-target .sc-trange { font-weight: 400; font-size: 0.7rem; opacity: 0.85; }
+
     .sc-stats { border-top: 1px solid var(--border); padding-top: 0.55rem; margin-top: 0.3rem; }
     .sc-row   { display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 0.18rem; }
     .sc-row .sl { color: var(--muted); }
@@ -94,6 +97,23 @@
 
     /* ── Amber badge ── */
     .amber-badge { background: rgba(210,153,34,0.22); color: var(--yellow); border-radius: 3px; font-size: 0.65rem; padding: 1px 4px; font-weight: 700; white-space: nowrap; }
+
+    /* ── Rating badges ── */
+    .rating-badge { border-radius: 3px; font-size: 0.62rem; padding: 1px 5px; font-weight: 700; white-space: nowrap; }
+    .rb-strong-buy  { background: rgba(63,185,80,0.18);   color: #3fb950; }
+    .rb-accumulate  { background: rgba(121,192,255,0.18); color: #79c0ff; }
+    .rb-hold        { background: rgba(210,153,34,0.18);  color: #d29922; }
+    .rb-trim        { background: rgba(240,136,62,0.18);  color: #f0883e; }
+    .rb-take-profit { background: rgba(248,81,73,0.18);   color: #f85149; }
+    .rb-exit        { background: rgba(200,30,30,0.22);   color: #e05252; }
+
+    /* ── Target band row (stock detail) ── */
+    .target-band { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .target-band:last-child { border-bottom: none; }
+    .target-band.active { background: var(--bg2); }
+    .target-band .tb-label { font-weight: 600; }
+    .target-band .tb-range { color: var(--muted); font-size: 0.78rem; }
+    .target-band .tb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
 
     /* ── Utility ── */
     .text-muted { color: var(--muted) !important; }
@@ -106,7 +126,15 @@
   <a href="/" class="topnav-brand">
     <i class="bi bi-graph-up-arrow"></i> CSE Dashboard
   </a>
+  {% if nav_gold %}
+  <a href="/gold" style="display:flex; align-items:center; gap:0.4rem; text-decoration:none;">
+    <i class="bi bi-gem" style="color:var(--yellow); font-size:0.85rem;"></i>
+    <span style="color:var(--yellow); font-weight:600; font-size:0.88rem;">Rs. {{ "{:,.0f}".format(nav_gold.price) }}</span>
+    <span class="text-muted small">22K &middot; 8g</span>
+  </a>
+  {% else %}
   <span class="text-muted small">Colombo Stock Exchange</span>
+  {% endif %}
 </nav>
 
 <div class="container-fluid px-4 py-4">
