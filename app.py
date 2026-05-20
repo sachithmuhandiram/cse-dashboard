@@ -137,6 +137,22 @@ def _today_fetched(fetch_type: str) -> bool:
         return False
 
 
+def _eod_fetched_today() -> bool:
+    """Returns True only if daily_data was successfully fetched after market close (15:30) today."""
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT COUNT(*) FROM fetch_log "
+                "WHERE fetch_type='daily_data' AND fetch_date=%s AND status='ok' "
+                "AND TIME(fetched_at) >= '15:30:00'",
+                (date.today(),),
+            )
+            return cur.fetchone()[0] > 0
+    except Exception:
+        return False
+
+
 def run_daily_fetch(period: int = 2):
     log.info("Daily fetch: %d symbols, period=%d", len(TRACKED_SYMBOLS), period)
     errors = []
@@ -154,13 +170,13 @@ def run_daily_fetch(period: int = 2):
 
 
 def hourly_check():
-    """Runs every hour. Fetches today's data if market has closed and data is missing."""
+    """Safety net: runs every hour. Fetches closing data if market is closed and EOD fetch hasn't run yet today."""
     now_sl = datetime.now(SL_TZ)
     after_close = now_sl.hour > 15 or (now_sl.hour == 15 and now_sl.minute >= 30)
     if now_sl.weekday() >= 5 or not after_close:
         return
-    if not _today_fetched("daily_data"):
-        log.info("Hourly check: fetching missing data for today")
+    if not _eod_fetched_today():
+        log.info("Hourly check: EOD fetch not yet done today, fetching now")
         run_daily_fetch()
 
 
@@ -254,7 +270,7 @@ def startup_backfill():
             after_close = now_sl.weekday() < 5 and (
                 now_sl.hour > 15 or (now_sl.hour == 15 and now_sl.minute >= 30)
             )
-            if after_close and not _today_fetched("daily_data"):
+            if after_close and not _eod_fetched_today():
                 log.info("Market closed, fetching today's data (last: %s)", last_date)
                 run_daily_fetch(period=2)
             else:
@@ -614,7 +630,15 @@ def gold_detail():
 if __name__ == "__main__":
     scheduler = BackgroundScheduler(timezone=SL_TZ)
 
-    # Hourly safety net: fetch if market is closed and today's data is missing
+    # Primary EOD fetch: 3:30 PM SL time, Mon-Fri (30 min after market close)
+    scheduler.add_job(
+        run_daily_fetch,
+        CronTrigger(day_of_week="mon-fri", hour=15, minute=30, timezone=SL_TZ),
+        id="eod_fetch",
+        kwargs={"period": 2},
+    )
+
+    # Hourly safety net: fetch if market is closed and DB is still behind
     scheduler.add_job(hourly_check, IntervalTrigger(hours=1), id="hourly_check")
 
     # Announcement fetch at 9 AM, 12 PM, 3 PM SL time

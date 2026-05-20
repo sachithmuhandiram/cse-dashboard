@@ -56,7 +56,7 @@
     <div class="m-sub">
       {% if gold_change is not none %}
       <span class="{{ 'chg-up' if gold_up else 'chg-down' }}">
-        {{ "%+,.0f" | format(gold_change) }} ({{ "%+.2f%%" | format(gold_change_pct) }})
+        {{ "{:+,.0f}".format(gold_change) }} ({{ "{:+.2f}%".format(gold_change_pct) }})
       </span>
       {% else %}{{ gold.date }}{% endif %}
     </div>
