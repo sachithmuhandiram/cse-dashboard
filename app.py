@@ -1,9 +1,10 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for, flash
 from contextlib import contextmanager
 from datetime import date, datetime
 import mysql.connector
 import json
 import logging
+import re
 import requests
 import time
 
@@ -20,6 +21,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.secret_key = "cse-dashboard-local-only"  # only used for flash messages on localhost
 
 DB_CONFIG = {
     "host":     "127.0.0.1",
@@ -29,12 +31,6 @@ DB_CONFIG = {
     "password": "REDACTED",
 }
 
-TRACKED_SYMBOLS = [
-    "AEL.N0000", "CIC.X0000", "COMB.X0000", "CTEA.N0000", "DIAL.N0000",
-    "HHL.N0000", "HNB.X0000", "JKH.N0000", "LFIN.N0000",
-    "NTB.X0000", "PINS.N0000", "PLC.N0000", "SUN.N0000",
-]
-TRACKED_PREFIXES  = {s.split(".")[0].upper() for s in TRACKED_SYMBOLS}
 SL_TZ             = pytz.timezone("Asia/Colombo")
 UNUSUAL_MULT      = 2.0   # 2× 20-day average triggers amber
 UNUSUAL_PRICE_PCT = 5.0   # ±5% price change triggers amber
@@ -107,6 +103,19 @@ def get_db():
         conn.close()
 
 
+def get_active_symbols() -> list[str]:
+    """Symbols the scheduler should fetch. Queried fresh so manage-page edits take effect immediately."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT symbol FROM stocks WHERE active = 1 ORDER BY symbol")
+        return [r[0] for r in cur.fetchall()]
+
+
+def get_active_prefixes() -> set[str]:
+    """Symbol prefixes (pre-dot) of active stocks, for announcement filtering."""
+    return {s.split(".")[0].upper() for s in get_active_symbols()}
+
+
 # ─── scheduled jobs ────────────────────────────────────────────────────────────
 
 def _log_fetch(fetch_type: str, fetch_date: date, status: str, message: str = None):
@@ -155,9 +164,10 @@ def _eod_fetched_today() -> bool:
 
 
 def run_daily_fetch(period: int = 2):
-    log.info("Daily fetch: %d symbols, period=%d", len(TRACKED_SYMBOLS), period)
+    symbols = get_active_symbols()
+    log.info("Daily fetch: %d symbols, period=%d", len(symbols), period)
     errors = []
-    for sym in TRACKED_SYMBOLS:
+    for sym in symbols:
         try:
             _fetch_stock(sym, period=period, db_cfg=DB_CONFIG)
         except Exception as exc:
@@ -228,9 +238,10 @@ def run_announcement_fetch():
     log.info("Fetching CSE announcements")
     try:
         items    = get_financial_announcements()
+        prefixes = get_active_prefixes()
         relevant = [
             i for i in items
-            if (i.get("symbol") or "").split(".")[0].upper() in TRACKED_PREFIXES
+            if (i.get("symbol") or "").split(".")[0].upper() in prefixes
         ]
         saved = save_announcements(relevant, DB_CONFIG) if relevant else 0
         _log_fetch("announcements", date.today(), "ok", f"{saved} new")
@@ -388,6 +399,7 @@ def index():
                     SELECT MAX(date) FROM daily_data
                     WHERE stock_id = d1.stock_id AND date < d1.date
                )
+            WHERE s.active = 1
             ORDER BY s.symbol
         """)
 
@@ -629,6 +641,110 @@ def gold_detail():
                            change_pct=change_pct)
 
 
+# ─── manage tickers ───────────────────────────────────────────────────────────
+
+SYMBOL_RE = re.compile(r"^[A-Z0-9]{1,8}\.[A-Z]\d{4}$")
+
+
+def _normalize_symbol(raw: str) -> str:
+    """Trim, uppercase, append trailing 0000 if the form is e.g. 'JKH.N'."""
+    s = (raw or "").strip().upper()
+    if "." in s and not s.endswith("0000") and len(s.split(".")[1]) == 1:
+        s = s + "0000"
+    return s
+
+
+@app.route("/manage")
+def manage():
+    with get_db() as conn:
+        cur = conn.cursor(dictionary=True)
+        cur.execute("""
+            SELECT s.symbol, s.name, s.active,
+                   (SELECT MAX(date) FROM daily_data d WHERE d.stock_id = s.id) AS last_date,
+                   (SELECT COUNT(*) FROM daily_data d WHERE d.stock_id = s.id) AS row_count
+            FROM stocks s
+            ORDER BY s.active DESC, s.symbol
+        """)
+        rows = cur.fetchall()
+    active   = [r for r in rows if r["active"]]
+    inactive = [r for r in rows if not r["active"]]
+    return render_template("manage.html", active=active, inactive=inactive)
+
+
+@app.route("/manage/add", methods=["POST"])
+def manage_add():
+    sym = _normalize_symbol(request.form.get("symbol", ""))
+    if not SYMBOL_RE.match(sym):
+        flash(f"Invalid symbol format: '{sym}'. Expected e.g. 'JKH.N0000'.", "error")
+        return redirect(url_for("manage"))
+
+    with get_db() as conn:
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT id, active FROM stocks WHERE symbol = %s", (sym,))
+        existing = cur.fetchone()
+
+    if existing and existing["active"]:
+        flash(f"{sym} is already tracked.", "info")
+        return redirect(url_for("manage"))
+
+    if existing and not existing["active"]:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("UPDATE stocks SET active = 1 WHERE symbol = %s", (sym,))
+            conn.commit()
+        flash(f"{sym} re-activated (historical data preserved).", "success")
+        return redirect(url_for("manage"))
+
+    # Brand-new symbol: fetch 12-month history; fetch_and_save upserts stocks
+    # row with default active=1, so success is "row now exists in stocks".
+    try:
+        _fetch_stock(sym, period=5, db_cfg=DB_CONFIG)
+    except Exception as exc:
+        log.error("Add ticker fetch failed [%s]: %s", sym, exc)
+        flash(f"Failed to fetch {sym} from CSE: {exc}", "error")
+        return redirect(url_for("manage"))
+
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM stocks WHERE symbol = %s", (sym,))
+        if not cur.fetchone():
+            flash(f"CSE returned no data for {sym}. Check the symbol and try again.", "error")
+            return redirect(url_for("manage"))
+
+    flash(f"{sym} added with 12-month history.", "success")
+    return redirect(url_for("manage"))
+
+
+@app.route("/manage/remove/<symbol>", methods=["POST"])
+def manage_remove(symbol):
+    sym = _normalize_symbol(symbol)
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE stocks SET active = 0 WHERE symbol = %s", (sym,))
+        affected = cur.rowcount
+        conn.commit()
+    if affected:
+        flash(f"{sym} removed from active tracking. Historical data kept.", "success")
+    else:
+        flash(f"{sym} not found.", "error")
+    return redirect(url_for("manage"))
+
+
+@app.route("/manage/reactivate/<symbol>", methods=["POST"])
+def manage_reactivate(symbol):
+    sym = _normalize_symbol(symbol)
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE stocks SET active = 1 WHERE symbol = %s", (sym,))
+        affected = cur.rowcount
+        conn.commit()
+    if affected:
+        flash(f"{sym} re-activated.", "success")
+    else:
+        flash(f"{sym} not found.", "error")
+    return redirect(url_for("manage"))
+
+
 if __name__ == "__main__":
     scheduler = BackgroundScheduler(timezone=SL_TZ)
 
@@ -650,11 +766,16 @@ if __name__ == "__main__":
         id="ann_fetch",
     )
 
-    # Gold price fetch once per day at 10 AM SL time
+    # Gold price fetch twice per day: 10 AM (morning) and 3:30 PM (post-market) SL
     scheduler.add_job(
         run_gold_price_fetch,
         CronTrigger(hour=10, minute=0, timezone=SL_TZ),
-        id="gold_fetch",
+        id="gold_fetch_morning",
+    )
+    scheduler.add_job(
+        run_gold_price_fetch,
+        CronTrigger(hour=15, minute=30, timezone=SL_TZ),
+        id="gold_fetch_afternoon",
     )
 
     scheduler.start()

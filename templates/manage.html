@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Manage Tickers — CSE Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  .manage-wrap { max-width: 900px; margin: 0 auto; }
+  .flash-box   { padding: 0.6rem 0.9rem; border-radius: 6px; margin-bottom: 0.6rem; font-size: 0.88rem; border: 1px solid; }
+  .flash-success { background: rgba(63,185,80,0.10);  color: var(--green);  border-color: rgba(63,185,80,0.4); }
+  .flash-error   { background: rgba(248,81,73,0.10);  color: var(--red);    border-color: rgba(248,81,73,0.45); }
+  .flash-info    { background: rgba(88,166,255,0.10); color: var(--blue);   border-color: rgba(88,166,255,0.4); }
+  .add-form { display: flex; gap: 0.5rem; margin-bottom: 0.4rem; }
+  .add-form input[type=text] {
+    flex: 1; background: var(--bg2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 0.45rem 0.7rem; font-size: 0.9rem; font-family: inherit;
+  }
+  .add-form input[type=text]:focus { outline: none; border-color: var(--blue); }
+  .btn-primary { background: var(--blue); border-color: var(--blue); }
+  .btn-secondary { background: var(--bg2); border: 1px solid var(--border); color: var(--text); padding: 0.3rem 0.7rem; border-radius: 4px; font-size: 0.78rem; cursor: pointer; }
+  .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+  .btn-warn    { background: rgba(248,81,73,0.10); color: var(--red); border: 1px solid rgba(248,81,73,0.35); }
+  .btn-warn:hover { background: rgba(248,81,73,0.18); }
+  .row-disabled td { color: var(--muted); }
+  .form-hint { font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem; }
+  table.tk td.action { text-align: right; width: 1%; white-space: nowrap; }
+  table.tk td.sym { font-weight: 600; color: var(--blue); }
+</style>
+
+<div class="manage-wrap">
+  <h4 style="margin-bottom:1rem;">Manage Tickers</h4>
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}
+      <div class="flash-box flash-{{ cat }}">{{ m }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card" style="padding:1rem; margin-bottom:1.5rem;">
+    <div style="font-size:0.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.5rem;">Add ticker</div>
+    <form class="add-form" method="POST" action="{{ url_for('manage_add') }}">
+      <input type="text" name="symbol" placeholder="e.g. SAMP.N0000" autocomplete="off" required>
+      <button type="submit" class="btn btn-primary btn-sm">Add</button>
+    </form>
+    <div class="form-hint">Fetches 12 months of history from CSE. May take ~15&ndash;30 seconds.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-header"><span class="label">Active &mdash; {{ active|length }}</span></div>
+    <table class="table table-hover tk">
+      <thead><tr><th>Symbol</th><th>Name</th><th>Last data</th><th>Rows</th><th></th></tr></thead>
+      <tbody>
+        {% for r in active %}
+        <tr>
+          <td class="sym">{{ r.symbol }}</td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.last_date or '—' }}</td>
+          <td>{{ r.row_count }}</td>
+          <td class="action">
+            <form method="POST" action="{{ url_for('manage_remove', symbol=r.symbol) }}"
+                  onsubmit="return confirm('Stop tracking {{ r.symbol }}? Historical data will be kept.');"
+                  style="display:inline;">
+              <button type="submit" class="btn-secondary btn-warn">Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted" style="text-align:center;">No active tickers.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="label">Inactive &mdash; {{ inactive|length }}</span></div>
+    <table class="table table-hover tk">
+      <thead><tr><th>Symbol</th><th>Name</th><th>Last data</th><th>Rows</th><th></th></tr></thead>
+      <tbody>
+        {% for r in inactive %}
+        <tr class="row-disabled">
+          <td class="sym" style="color:var(--muted);">{{ r.symbol }}</td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.last_date or '—' }}</td>
+          <td>{{ r.row_count }}</td>
+          <td class="action">
+            <form method="POST" action="{{ url_for('manage_reactivate', symbol=r.symbol) }}" style="display:inline;">
+              <button type="submit" class="btn-secondary">Re-activate</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted" style="text-align:center;">No inactive tickers.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

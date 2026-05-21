@@ -126,15 +126,18 @@
   <a href="/" class="topnav-brand">
     <i class="bi bi-graph-up-arrow"></i> CSE Dashboard
   </a>
-  {% if nav_gold %}
-  <a href="/gold" style="display:flex; align-items:center; gap:0.4rem; text-decoration:none;">
-    <i class="bi bi-gem" style="color:var(--yellow); font-size:0.85rem;"></i>
-    <span style="color:var(--yellow); font-weight:600; font-size:0.88rem;">Rs. {{ "{:,.0f}".format(nav_gold.price) }}</span>
-    <span class="text-muted small">22K &middot; 8g</span>
-  </a>
-  {% else %}
-  <span class="text-muted small">Colombo Stock Exchange</span>
-  {% endif %}
+  <div style="display:flex; align-items:center; gap:1.25rem;">
+    {% if nav_gold %}
+    <a href="/gold" style="display:flex; align-items:center; gap:0.4rem; text-decoration:none;">
+      <i class="bi bi-gem" style="color:var(--yellow); font-size:0.85rem;"></i>
+      <span style="color:var(--yellow); font-weight:600; font-size:0.88rem;">Rs. {{ "{:,.0f}".format(nav_gold.price) }}</span>
+      <span class="text-muted small">22K &middot; 8g</span>
+    </a>
+    {% endif %}
+    <a href="/manage" style="display:flex; align-items:center; gap:0.35rem; color:var(--muted); font-size:0.85rem;">
+      <i class="bi bi-sliders"></i> Manage
+    </a>
+  </div>
 </nav>
 
 <div class="container-fluid px-4 py-4">
