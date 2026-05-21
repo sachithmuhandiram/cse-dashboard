@@ -138,14 +138,15 @@ def _today_fetched(fetch_type: str) -> bool:
 
 
 def _eod_fetched_today() -> bool:
-    """Returns True only if daily_data was successfully fetched after market close (15:30) today."""
+    """Returns True only if daily_data was successfully fetched after market close (15:30 SL) today."""
     try:
         with get_db() as conn:
             cur = conn.cursor()
+            # fetched_at is stored in UTC by MySQL; convert to SL before comparing.
             cur.execute(
                 "SELECT COUNT(*) FROM fetch_log "
                 "WHERE fetch_type='daily_data' AND fetch_date=%s AND status='ok' "
-                "AND TIME(fetched_at) >= '15:30:00'",
+                "AND TIME(CONVERT_TZ(fetched_at, '+00:00', '+05:30')) >= '15:30:00'",
                 (date.today(),),
             )
             return cur.fetchone()[0] > 0
