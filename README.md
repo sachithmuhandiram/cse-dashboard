@@ -1,115 +1,122 @@
-# Colombo Stock Exchange (CSE) API 📈🏢
+# CSE Dashboard
 
-> **Unofficial API usage guide & Python example 🐍**  
-> Explore stock market data from the Colombo Stock Exchange (CSE) via their public API endpoints — reverse-engineered since no official documentation exists. 🔍
+A self-hosted Flask dashboard for the Colombo Stock Exchange. Tracks a personal
+watchlist of CSE tickers, fetches end-of-day OHLCV via the (unofficial) CSE API,
+pulls relevant financial announcements, and shows the daily 22K gold price.
 
----
+Built on top of the reverse-engineered CSE API documentation by
+[GH0STH4CKER](https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation).
 
-<b>Visit <a href='https://gh0sth4cker.github.io/Colombo-Stock-Exchange-CSE-API-Documentation/'>this link</a> to see web view<b>
+## Features
 
-## Overview 📋
+- **Watchlist dashboard** — latest close, daily change, 20-day volume/turnover
+  baselines, "unusual activity" highlight, configurable target bands per stock.
+- **Manage page (`/manage`)** — add/remove/re-activate tickers without
+  redeploying. Removing a ticker stops new fetches but keeps historical data.
+- **Scheduler** — APScheduler jobs (Asia/Colombo timezone):
+  - EOD stock data: weekdays 15:30 SL, plus an hourly safety-net catch-up.
+  - Announcements: 09:00, 12:00, 15:00 SL.
+  - 22K gold price: 10:00 and 15:30 SL (scraped from ideabeam.com).
+- **Startup backfill** — on launch, detects missing trading days and fills the
+  gap.
 
-The Colombo Stock Exchange provides real-time and historical stock data via several public endpoints used by their web portal.  
-This repository documents some of the known API endpoints, example responses, and Python code to fetch and parse data.
+## Quickstart
 
----
+### 1. MySQL
 
-## API Endpoints 🔗
+Either run MySQL in Docker:
 
-Base URL: `https://www.cse.lk/api/`
-
-| Endpoint                                  | Description                                        | HTTP Method | Required Params/Data                  |
-| ----------------------------------------- | -------------------------------------------------- | ----------- | ------------------------------------ |
-| companyInfoSummery                        | Detailed info of a single stock/security by symbol | POST        | symbol                               |
-| tradeSummary                              | Summary of trades for all securities               | POST        |                                      |
-| todaySharePrice                           | Today's share price data                           | POST        |                                      |
-| topGainers                                | List of top gaining stocks                         | POST        |                                      |
-| topLooses                                 | List of top losing stocks                          | POST        |                                      |
-| mostActiveTrades                          | Most active trades by volume                       | POST        |                                      |
-| getNewListingsRelatedNoticesAnnouncements | New listings and related announcements             | POST        |                                      |
-| getBuyInBoardAnnouncements                | Buy-in board announcements                         | POST        |                                      |
-| approvedAnnouncement                      | Approved announcements                             | POST        |                                      |
-| getCOVIDAnnouncements                     | COVID-related announcements                        | POST        |                                      |
-| getFinancialAnnouncement                  | Financial announcements                            | POST        |                                      |
-| circularAnnouncement                      | Circular announcements                             | POST        |                                      |
-| directiveAnnouncement                     | Directive announcements                             | POST       |                                      |
-| getNonComplianceAnnouncements             | Non-compliance announcements                       | POST        |                                      |
-| marketStatus                              | Market open/close status                           | POST        |                                      |
-| marketSummery                             | Market summary data                                | POST        |                                      |
-| aspiData                                  | All Share Price Index data                         | POST        |                                      |
-| snpData                                   | S&P Sri Lanka 20 Index data                        | POST        |                                      |
-| chartData                                 | Chart data for stocks                              | POST        | symbol, chartId, period              |
-| allSectors                                | Data for all sectors                               | POST        |                                      |
-| detailedTrades                            | Detailed Trades                                    | POST        |                                      |
-| dailyMarketSummery                        | Daily Market Summary                               | POST        |                                      |
-|companyChartDataByStock                    | Company Chart Data By Stock                        | POST        | stockId , period=1                                     |
-
----
-
-visit <a href='https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation/blob/main/api_endpoint_urls.txt'>this link</a> to view all complete endpoint urls.
-
-## Usage Example 💻python
-
-### Get detailed stock info by symbol 🔍
-
-```python
-import requests
-
-base_url = "https://www.cse.lk/api/"
-endpoint = "companyInfoSummery"
-
-data = {"symbol": "LOLC.N0000"}
-
-response = requests.post(base_url + endpoint, data=data)
-
-print(f"Status code: {response.status_code}")
-print(response.json())  # Prints the response as a Python dictionary
+```bash
+docker run -d --name cse-mysql \
+  -e MYSQL_ROOT_PASSWORD=changeme \
+  -p 3306:3306 \
+  -v cse-mysql-data:/var/lib/mysql \
+  mysql:8
 ```
 
----
+…or use an existing standalone MySQL 8 instance.
 
-## Sample Response: `companyInfoSummery` 📝
+Create a dedicated user (adjust the password):
 
-```json
-{
-  "reqSymbolInfo": {
-    "symbol": "LOLC.N0000",
-    "name": "L O L C HOLDINGS PLC",
-    "lastTradedPrice": 546.5,
-    "change": -2.5,
-    "changePercentage": -0.455,
-    "marketCap": 259696800000
-  },
-  "reqLogo": {
-    "id": 2168,
-    "path": "upload_logo/378_1601611239.jpeg"
-  },
-  "reqSymbolBetaInfo": {
-    "betaValueSPSL": 1.0227
-  }
-}
+```sql
+CREATE USER 'cse'@'%' IDENTIFIED BY 'your-strong-password';
+GRANT ALL PRIVILEGES ON cse_db.* TO 'cse'@'%';
+FLUSH PRIVILEGES;
 ```
 
----
+### 2. Schema
 
-## Contribution 🤝
+Apply the schema and migrations in order. They are idempotent.
 
-This is an **unofficial** reverse-engineered API.  
-If you discover more endpoints or useful parameters, please submit a **Pull Request**!  
-Help expand the community knowledge about the Colombo Stock Exchange API. 🚀
-<br>
-[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=FB9KXK4TEAUJ6)
+```bash
+mysql -h 127.0.0.1 -u cse -p < schema.sql
+mysql -h 127.0.0.1 -u cse -p cse_db < migrate_v2.sql
+mysql -h 127.0.0.1 -u cse -p cse_db < migrate_targets.sql
+mysql -h 127.0.0.1 -u cse -p cse_db < migrate_v2_active.sql
+mysql -h 127.0.0.1 -u cse -p cse_db < cse_db_triggers.sql
+```
 
----
+### 3. App
 
-## Disclaimer ⚠️
+```bash
+git clone https://github.com/sachithmuhandiram/cse-dashboard.git
+cd cse-dashboard
 
-- Use responsibly and verify data accuracy with official CSE sources.
-- API endpoints and formats may change without notice.
-- This repository is for educational purposes only.
+cp .env.example .env
+# Edit .env and set DB_PASSWORD (and DB_HOST etc. if not localhost).
 
----
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 
-[![Stargazers repo roster for @GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation](https://reporoster.com/stars/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation)](https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation/stargazers)
+python3 app.py
+```
 
-[![Forkers repo roster for @GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation](https://reporoster.com/forks/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation)](https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation/network/members)
+Open <http://localhost:5050>. Add tickers from <http://localhost:5050/manage>.
+
+### 4. (optional) Run as a systemd service
+
+A sample unit lives in `cse-dashboard.service`. Edit the `User=` and
+`WorkingDirectory=` fields, then:
+
+```bash
+sudo cp cse-dashboard.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now cse-dashboard
+```
+
+## Configuration
+
+All DB settings come from `.env` (see `.env.example`):
+
+| Variable     | Default     | Notes                                |
+| ------------ | ----------- | ------------------------------------ |
+| `DB_HOST`    | `127.0.0.1` |                                      |
+| `DB_PORT`    | `3306`      |                                      |
+| `DB_NAME`    | `cse_db`    |                                      |
+| `DB_USER`    | `cse`       |                                      |
+| `DB_PASSWORD`| (required)  | Must match the MySQL user you created |
+
+The tracked symbol list is no longer hardcoded — it lives in the `stocks`
+table with an `active` flag, managed from the `/manage` page.
+
+## Project layout
+
+```
+app.py                       Flask app, routes, scheduler wiring
+db_config.py                 Loads DB_CONFIG from .env
+get_daily_trades.py          CSE API client + daily_data upsert
+get_financial_announcements.py  Announcement scraper
+fetch_gold_price.py          22K gold price scraper (ideabeam.com)
+templates/                   Jinja templates (base, index, stock, gold, manage)
+schema.sql                   Core schema (stocks, daily_data, fetch_log)
+migrate_v2.sql               Announcements table
+migrate_targets.sql          Stock target / rating bands
+migrate_v2_active.sql        active flag on stocks
+cse_db_triggers.sql          DB triggers
+cse-dashboard.service        Sample systemd unit
+```
+
+## License
+
+The upstream CSE API documentation is unofficial; this project inherits no
+warranty. Use at your own discretion.

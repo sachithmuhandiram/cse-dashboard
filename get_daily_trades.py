@@ -25,13 +25,7 @@ import requests
 
 BASE_URL = "https://www.cse.lk/api/"
 
-DB_CONFIG = {
-    "host":     "127.0.0.1",
-    "port":     3306,
-    "database": "cse_db",
-    "user":     "cse",
-    "password": "REDACTED",
-}
+from db_config import DB_CONFIG
 
 # ── CSE API helpers ─────────────────────────────────────────────────────────────
 
