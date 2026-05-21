@@ -450,8 +450,9 @@ def index():
 
         cur.execute("""
             SELECT fetch_type,
-                   MAX(fetched_at) AS last_at,
-                   MAX(CASE WHEN status = 'ok' THEN fetched_at END) AS last_ok,
+                   MAX(CONVERT_TZ(fetched_at, '+00:00', '+05:30')) AS last_at,
+                   MAX(CASE WHEN status = 'ok'
+                            THEN CONVERT_TZ(fetched_at, '+00:00', '+05:30') END) AS last_ok,
                    SUM(CASE WHEN status != 'ok' AND fetch_date = CURDATE() THEN 1 ELSE 0 END) AS errors_today
             FROM fetch_log
             GROUP BY fetch_type
