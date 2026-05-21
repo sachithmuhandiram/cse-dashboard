@@ -1,3 +1,11 @@
+"""
+Fetch CSE financial announcements (PDFs + metadata) and persist to MySQL.
+
+The getFinancialAnnouncement endpoint and its response shape were
+reverse-engineered and documented by GH0STH4CKER:
+https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation
+"""
+
 import requests
 import mysql.connector
 from datetime import datetime, date as _date

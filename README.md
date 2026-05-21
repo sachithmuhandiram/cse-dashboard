@@ -4,8 +4,11 @@ A self-hosted Flask dashboard for the Colombo Stock Exchange. Tracks a personal
 watchlist of CSE tickers, fetches end-of-day OHLCV via the (unofficial) CSE API,
 pulls relevant financial announcements, and shows the daily 22K gold price.
 
-Built on top of the reverse-engineered CSE API documentation by
-[GH0STH4CKER](https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation).
+> **Built on the [Colombo-Stock-Exchange-CSE-API-Documentation](https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation)
+> project by [GH0STH4CKER](https://github.com/GH0STH4CKER).** All CSE API
+> endpoints, request payloads, and response shapes used in this dashboard were
+> reverse-engineered and documented there. Please star the upstream project if
+> you find it useful.
 
 ## Features
 
@@ -115,6 +118,17 @@ migrate_v2_active.sql        active flag on stocks
 cse_db_triggers.sql          DB triggers
 cse-dashboard.service        Sample systemd unit
 ```
+
+## Credits
+
+- **CSE API endpoints, request payloads, and response shapes** — all reverse-
+  engineered and documented by
+  [GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation](https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation).
+  This dashboard would not exist without that work. The endpoint catalogue,
+  field names, and the `companyChartDataByStock` / `detailedTrades` /
+  `getFinancialAnnouncement` calls used by `get_daily_trades.py` and
+  `get_financial_announcements.py` all originate from that project.
+- **22K gold price** — scraped from [ideabeam.com](https://ideabeam.com).
 
 ## License
 
