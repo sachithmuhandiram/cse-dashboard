@@ -81,14 +81,19 @@
 {% endif %}
 
 <!-- Target bands -->
-{% if target_bands %}
 <div class="card mb-4">
   <div class="card-header d-flex justify-content-between align-items-center">
     <span class="label"><i class="bi bi-bullseye me-1"></i>Target Bands</span>
-    {% if rating %}
-    <span class="rating-badge {{ rating_css }}">{{ rating }}</span>
-    {% endif %}
+    <span class="d-flex align-items-center gap-2">
+      {% if rating %}
+      <span class="rating-badge {{ rating_css }}">{{ rating }}</span>
+      {% endif %}
+      <a href="{{ url_for('edit_targets', symbol=stock.symbol) }}" class="text-muted small" title="Edit target bands">
+        <i class="bi bi-pencil-square"></i> Edit
+      </a>
+    </span>
   </div>
+  {% if target_bands %}
   {% for b in target_bands %}
   <div class="target-band {% if b.label == rating %}active{% endif %}">
     <span class="tb-dot" style="background: {%
@@ -106,8 +111,12 @@
     </span>
   </div>
   {% endfor %}
+  {% else %}
+  <div class="text-muted small" style="padding:0.75rem 1rem;">
+    No target bands set. <a href="{{ url_for('edit_targets', symbol=stock.symbol) }}">Add some</a> to get a buy/trim rating on the dashboard.
+  </div>
+  {% endif %}
 </div>
-{% endif %}
 
 <!-- Price chart -->
 <div class="card mb-4">

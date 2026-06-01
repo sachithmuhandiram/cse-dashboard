@@ -602,6 +602,111 @@ def stock_detail(symbol):
                            rating_css=rating_css)
 
 
+@app.route("/stock/<symbol>/targets", methods=["GET"])
+def edit_targets(symbol):
+    with get_db() as conn:
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT id, symbol, name FROM stocks WHERE symbol = %s", (symbol,))
+        stock = cur.fetchone()
+        if not stock:
+            return "Stock not found", 404
+        cur.execute("""
+            SELECT label, price_min, price_max, note, sort_order
+            FROM stock_targets
+            WHERE stock_id = %s
+            ORDER BY sort_order
+        """, (stock["id"],))
+        bands = [
+            {
+                "label":     row["label"],
+                "price_min": float(row["price_min"]),
+                "price_max": float(row["price_max"]) if row["price_max"] is not None else None,
+                "note":      row["note"] or "",
+                "css":       RATING_CSS.get(row["label"], ""),
+            }
+            for row in cur.fetchall()
+        ]
+    return render_template("targets_edit.html",
+                           stock=stock,
+                           bands=bands,
+                           labels=list(RATING_CSS.keys()),
+                           rating_css=RATING_CSS)
+
+
+@app.route("/stock/<symbol>/targets", methods=["POST"])
+def save_targets(symbol):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM stocks WHERE symbol = %s", (symbol,))
+        row = cur.fetchone()
+        if not row:
+            return "Stock not found", 404
+        stock_id = row[0]
+
+    labels = request.form.getlist("label")
+    mins   = request.form.getlist("price_min")
+    maxs   = request.form.getlist("price_max")
+    notes  = request.form.getlist("note")
+
+    parsed, errors = [], []
+    for i, label in enumerate(labels):
+        label   = (label or "").strip()
+        raw_min = (mins[i]  if i < len(mins)  else "").strip()
+        raw_max = (maxs[i]  if i < len(maxs)  else "").strip()
+        note    = (notes[i] if i < len(notes) else "").strip()
+
+        # skip fully-blank rows (e.g. an "Add band" row left untouched)
+        if not (label or raw_min or raw_max or note):
+            continue
+
+        n = i + 1
+        if label not in RATING_CSS:
+            errors.append(f"Row {n}: pick a valid rating label.")
+            continue
+        try:
+            pmin = float(raw_min)
+        except ValueError:
+            errors.append(f"Row {n} ({label}): min price is required and must be a number.")
+            continue
+        if pmin < 0:
+            errors.append(f"Row {n} ({label}): min price must be ≥ 0.")
+            continue
+        pmax = None
+        if raw_max:
+            try:
+                pmax = float(raw_max)
+            except ValueError:
+                errors.append(f"Row {n} ({label}): max price must be a number or left blank.")
+                continue
+            if pmax <= pmin:
+                errors.append(f"Row {n} ({label}): max price must be greater than min.")
+                continue
+        parsed.append((label, pmin, pmax, note[:100] or None))
+
+    if errors:
+        for e in errors:
+            flash(e, "error")
+        return redirect(url_for("edit_targets", symbol=symbol))
+
+    # Replace the whole band set in one transaction: simplest correct way to
+    # handle adds, removals, edits and reordering. Nothing references
+    # stock_targets.id, so delete+reinsert is safe. sort_order follows row order.
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM stock_targets WHERE stock_id = %s", (stock_id,))
+        if parsed:
+            cur.executemany(
+                "INSERT INTO stock_targets (stock_id, label, price_min, price_max, note, sort_order) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                [(stock_id, label, pmin, pmax, note, idx + 1)
+                 for idx, (label, pmin, pmax, note) in enumerate(parsed)],
+            )
+        conn.commit()
+
+    flash(f"Saved {len(parsed)} target band(s) for {symbol}.", "success")
+    return redirect(url_for("stock_detail", symbol=symbol))
+
+
 @app.route("/gold")
 def gold_detail():
     with get_db() as conn:
